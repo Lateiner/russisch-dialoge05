@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch lernen: Taxi-Lückentext</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #2c3e50;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 { color: var(--secondary); text-align: center; margin-bottom: 10px; }
+        .description { text-align: center; color: #666; margin-bottom: 25px; font-size: 0.95em; }
+
+        /* Wortbank */
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            background: #f0f3f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 2px solid #dfe6e9;
+        }
+
+        .word-card {
+            background: white;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .word-card.selected {
+            background: var(--primary);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .word-card.correct-used {
+            opacity: 0.3;
+            cursor: default;
+            pointer-events: none;
+            border-color: var(--success);
+        }
+
+        /* Dialog Area */
+        .dialogue-area { line-height: 2.2; font-size: 1.1em; color: var(--secondary); }
+        h3 { border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 25px; color: var(--primary); }
+
+        .dialogue-line { margin-bottom: 12px; padding-left: 20px; position: relative; }
+        .dialogue-line::before { content: "—"; position: absolute; left: 0; }
+
+        /* Lücken */
+        .gap {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 110px;
+            height: 32px;
+            border-bottom: 2px solid #bdc3c7;
+            margin: 0 4px;
+            background: #fafafa;
+            cursor: pointer;
+            transition: all 0.3s;
+            vertical-align: middle;
+            font-weight: bold;
+            border-radius: 4px 4px 0 0;
+        }
+
+        .gap.correct {
+            background-color: #d4edda !important;
+            color: #155724 !important;
+            border-bottom-color: var(--success);
+            cursor: default;
+        }
+
+        .gap.incorrect {
+            background-color: #f8d7da !important;
+            color: #721c24 !important;
+            border-bottom-color: var(--error);
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake {
+            0%, 100% {transform: translateX(0);}
+            25% {transform: translateX(-5px);}
+            75% {transform: translateX(5px);}
+        }
+
+        /* Buttons */
+        .controls { display: flex; gap: 10px; justify-content: center; margin-top: 30px; }
+        button { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; }
+        .btn-reset { background-color: var(--secondary); }
+        .btn-solution { background-color: #95a5a6; }
+        button:hover { opacity: 0.8; }
+
+        .score-display { text-align: center; margin-top: 15px; font-weight: bold; color: var(--secondary); }
+
+        @media (max-width: 600px) {
+            .gap { min-width: 90px; font-size: 0.9em; }
+            .container { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚕 Taxi-Vokabel Training</h1>
+    <p class="description">Klicke ein Wort an und fülle die Lücke. <br><b>Das Feedback erscheint sofort!</b></p>
+
+    <div class="word-bank" id="wordBank"></div>
+
+    <div class="dialogue-area">
+        <h3>Teil 1: Die Bestellung</h3>
+        <div class="dialogue-line">Здравствуйте! Я хочу <span class="gap" data-answer="заказать"></span> такси.</div>
+        <div class="dialogue-line">Откуда вас забрать?</div>
+        <div class="dialogue-line">Улица Твернадского, 20. Сколько мне <span class="gap" data-answer="ждать"></span>?</div>
+        <div class="dialogue-line">Поездка будет <span class="gap" data-answer="стоить"></span> 500 рублей.</div>
+
+        <h3>Teil 2: Die Fahrt</h3>
+        <div class="dialogue-line">Положите чемодан в <span class="gap" data-answer="багажник"></span>, пожалуйста.</div>
+        <div class="dialogue-line">Вы будете платить наличными или <span class="gap" data-answer="картой"></span>?</div>
+        <div class="dialogue-line">Вы можете <span class="gap" data-answer="высадить"></span> меня здесь?</div>
+    </div>
+
+    <div class="score-display" id="scoreText">Richtig: 0 / 6</div>
+
+    <div class="controls">
+        <button class="btn-reset" onclick="resetGame()">Neu starten</button>
+        <button class="btn-solution" onclick="showSolution()">Lösung zeigen</button>
+    </div>
+</div>
+
+<script>
+    const words = ["заказать", "ждать", "стоить", "багажник", "картой", "высадить"];
+    let selectedWordElement = null;
+    let correctAnswers = 0;
+
+    function init() {
+        const bank = document.getElementById('wordBank');
+        bank.innerHTML = '';
+        const shuffled = [...words].sort(() => Math.random() - 0.5);
+        
+        shuffled.forEach(word => {
+            const div = document.createElement('div');
+            div.className = 'word-card';
+            div.textContent = word;
+            div.onclick = () => selectWord(div);
+            bank.appendChild(div);
+        });
+
+        document.querySelectorAll('.gap').forEach(gap => {
+            gap.textContent = "";
+            gap.className = "gap";
+            gap.onclick = () => fillGap(gap);
+        });
+        
+        correctAnswers = 0;
+        updateScore();
+    }
+
+    function selectWord(element) {
+        if (element.classList.contains('correct-used')) return;
+        document.querySelectorAll('.word-card').forEach(card => card.classList.remove('selected'));
+        selectedWordElement = element;
+        element.classList.add('selected');
+    }
+
+    function fillGap(gap) {
+        if (gap.classList.contains('correct')) return; // Bereits gelöst
+        if (!selectedWordElement) return;
+
+        const chosenWord = selectedWordElement.textContent;
+        const correctAnswer = gap.dataset.answer;
+
+        gap.textContent = chosenWord;
+
+        if (chosenWord === correctAnswer) {
+            // RICHTIG
+            gap.className = "gap correct";
+            selectedWordElement.classList.add('correct-used');
+            selectedWordElement.classList.remove('selected');
+            selectedWordElement = null;
+            correctAnswers++;
+            updateScore();
+        } else {
+            // FALSCH
+            gap.className = "gap incorrect";
+            // Nach kurzer Zeit wieder leeren, damit man es erneut versuchen kann
+            setTimeout(() => {
+                if (gap.className === "gap incorrect") {
+                    gap.textContent = "";
+                    gap.className = "gap";
+                }
+            }, 1000);
+        }
+    }
+
+    function updateScore() {
+        document.getElementById('scoreText').textContent = `Richtig: ${correctAnswers} / ${words.length}`;
+        if (correctAnswers === words.length) {
+            document.getElementById('scoreText').innerHTML = "Richtig: 6 / 6 — <b>Sehr gut! 🎉</b>";
+        }
+    }
+
+    function resetGame() {
+        selectedWordElement = null;
+        init();
+    }
+
+    function showSolution() {
+        document.querySelectorAll('.gap').forEach(gap => {
+            gap.textContent = gap.dataset.answer;
+            gap.className = "gap correct";
+        });
+        document.querySelectorAll('.word-card').forEach(card => {
+            card.classList.add('correct-used');
+            card.classList.remove('selected');
+        });
+        correctAnswers = words.length;
+        updateScore();
+    }
+
+    init();
+</script>
+
+</body>
+</html>
