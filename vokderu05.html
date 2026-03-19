@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch lernen: Vokabel-Dropdown-Zuordnung (Deutsch-Russisch)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            max-width: 700px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.8em;
+        }
+
+        .task-description {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #555;
+            font-size: 1.1em;
+        }
+
+        .vocabulary-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .vocabulary-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 15px;
+            background-color: #ecf0f1;
+            border-radius: 6px;
+            border: 1px solid #bdc3c7;
+            font-size: 1em;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .vocabulary-item .german-word { /* Class for the word to be translated */
+            flex-basis: 60%;
+            color: #34495e;
+            font-weight: bold;
+        }
+
+        .vocabulary-item select {
+            flex-basis: 35%;
+            padding: 8px;
+            border: 1px solid #95a5a6;
+            border-radius: 4px;
+            background-color: white;
+            font-size: 0.95em;
+            cursor: pointer;
+            min-width: 150px;
+        }
+        
+        .vocabulary-item select.correct {
+            border-color: #27ae60;
+            background-color: #e6ffe6;
+            color: #1a7a3a;
+        }
+
+        .vocabulary-item select.incorrect {
+            border-color: #e74c3c;
+            background-color: #ffe6e6;
+            color: #b72f2f;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .reset-button, .show-solution-button {
+            padding: 12px 25px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .reset-button {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .reset-button:hover {
+            background-color: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .show-solution-button {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        .show-solution-button:hover {
+            background-color: #e67e22;
+            transform: translateY(-2px);
+        }
+
+        .score {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 1.1em;
+            color: #34495e;
+            min-height: 25px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .vocabulary-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .vocabulary-item .german-word { /* Class changed */
+                flex-basis: 100%;
+                margin-bottom: 5px;
+            }
+            .vocabulary-item select {
+                flex-basis: 100%;
+                min-width: unset;
+            }
+            .button-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .reset-button, .show-solution-button {
+                width: 80%;
+                font-size: 1em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.4em;
+            }
+            .task-description {
+                font-size: 0.9em;
+            }
+            .reset-button, .show-solution-button {
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Vokabel-Dropdown-Zuordnung: Deutsch-Russisch</h1>
+        <p class="task-description">Wählen Sie für jede deutsche Vokabel die passende russische Übersetzung aus dem Dropdown-Menü aus.</p>
+
+        <div class="vocabulary-list" id="vocabularyList">
+            <!-- Vocabulary items with dropdowns will be injected here -->
+        </div>
+        
+        <div class="score" id="score">0 von 0 richtig</div>
+
+        <div class="button-group">
+            <button class="reset-button" onclick="resetTask()">Neu starten</button>
+            <button class="show-solution-button" onclick="showSolution()">Lösung anzeigen</button>
+        </div>
+    </div>
+
+    <script>
+        const vocabulary = [
+            { russian: "Здравствуйте!", german: "Guten Tag!" },
+            { russian: "Я хочу заказать", german: "Ich möchte bestellen" },
+            { russian: "Куда поедете?", german: "Wohin fahren Sie?" },
+            { russian: "На улицу", german: "Zur Straße" },
+            { russian: "Поездка будет стоить", german: "Die Fahrt wird kosten" },
+            { russian: "Сколько ждать?", german: "Wie lange muss ich warten?" },
+            { russian: "Спасибо!", german: "Danke!" },
+            { russian: "До свидания.", german: "Auf Wiedersehen." },
+            { russian: "Откуда вас забрать?", german: "Von wo soll ich Sie abholen?" },
+            { russian: "Я на улице", german: "Ich bin an der Straße" },
+            { russian: "Хорошо, ждите машину.", german: "Gut, warten Sie auf das Auto." }
+        ];
+
+        const vocabularyList = document.getElementById('vocabularyList');
+        const scoreElement = document.getElementById('score');
+        const totalItems = vocabulary.length;
+        let currentScore = 0;
+
+        function initializeTask() {
+            vocabularyList.innerHTML = ''; // Clear previous items
+            currentScore = 0; // Reset score
+            updateScoreDisplay();
+
+            // Shuffle German words to randomize the order of the dropdowns
+            const shuffledVocabulary = shuffleArray([...vocabulary]);
+
+            shuffledVocabulary.forEach((item, index) => {
+                const vocabItem = document.createElement('div');
+                vocabItem.classList.add('vocabulary-item');
+
+                const germanWord = document.createElement('span'); // Display German word
+                germanWord.classList.add('german-word');
+                germanWord.textContent = item.german;
+                vocabItem.appendChild(germanWord);
+
+                const select = document.createElement('select');
+                select.id = `select-${index}`; // Unique ID for each dropdown
+                select.dataset.correctRussian = item.russian; // Store the correct Russian answer
+
+                const defaultOption = document.createElement('option');
+                defaultOption.value = "";
+                defaultOption.textContent = "Wählen Sie...";
+                select.appendChild(defaultOption);
+
+                // Create shuffled options for the dropdown (using Russian words)
+                const options = generateShuffledOptions(item.russian);
+                options.forEach(optionText => {
+                    const option = document.createElement('option');
+                    option.value = optionText;
+                    option.textContent = optionText;
+                    select.appendChild(option);
+                });
+
+                select.addEventListener('change', () => {
+                    checkSingleAnswer(select); // Check immediately on change
+                    updateTotalScore(); // Update total score after change
+                });
+
+                vocabItem.appendChild(select);
+                vocabularyList.appendChild(vocabItem);
+            });
+        }
+
+        // Generates 3 options: 1 correct and 2 random incorrect ones (Russian words)
+        function generateShuffledOptions(correctRussianWord) {
+            let incorrectOptions = vocabulary
+                .map(item => item.russian)
+                .filter(word => word !== correctRussianWord);
+            
+            // Shuffle and pick 2 unique incorrect options
+            incorrectOptions = shuffleArray(incorrectOptions).slice(0, 2);
+
+            let allOptions = [correctRussianWord, ...incorrectOptions];
+            return shuffleArray(allOptions);
+        }
+        
+        // Checks a single select element and applies feedback
+        function checkSingleAnswer(selectElement) {
+            selectElement.classList.remove('correct', 'incorrect'); // Reset feedback
+            if (selectElement.value === selectElement.dataset.correctRussian) {
+                selectElement.classList.add('correct');
+                return true;
+            } else {
+                selectElement.classList.add('incorrect');
+                return false;
+            }
+        }
+
+        // Updates the total score based on all current selections
+        function updateTotalScore() {
+            let tempScore = 0;
+            const selectElements = vocabularyList.querySelectorAll('select');
+            selectElements.forEach(select => {
+                if (select.value === select.dataset.correctRussian) {
+                    tempScore++;
+                }
+            });
+            currentScore = tempScore;
+            updateScoreDisplay();
+        }
+
+        function updateScoreDisplay() {
+            scoreElement.textContent = `${currentScore} von ${totalItems} richtig`;
+        }
+
+        function resetTask() {
+            initializeTask(); // Reinitialize to shuffle everything and clear selections
+        }
+
+        function showSolution() {
+            const selectElements = vocabularyList.querySelectorAll('select');
+            let solutionScore = 0;
+
+            selectElements.forEach(select => {
+                select.value = select.dataset.correctRussian; // Set to correct answer
+                select.classList.add('correct'); // Mark as correct
+                select.classList.remove('incorrect');
+                select.disabled = true; // Disable dropdowns in solution mode
+                solutionScore++;
+            });
+            currentScore = solutionScore; // Update current score to solution score
+            scoreElement.textContent = `${solutionScore} von ${totalItems} richtig (Lösung)`;
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeTask);
+    </script>
+</body>
+</html>
