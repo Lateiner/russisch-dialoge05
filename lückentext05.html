@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Lückentext: Dialog 3</title>
+    <style>
+        :root {
+            --taxi-yellow: #f1c40f;
+            --dark-blue: #2c3e50;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 700px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 25px;
+            align-self: center;
+        }
+
+        h1 { text-align: center; color: var(--dark-blue); font-size: 1.5rem; margin-bottom: 25px; }
+
+        .dialogue-box {
+            background: #fdfdfd;
+            border: 1px solid #eee;
+            border-radius: 15px;
+            padding: 20px;
+            line-height: 2.2;
+            font-size: 1.1rem;
+            color: var(--dark-blue);
+        }
+
+        .line { margin-bottom: 15px; display: block; }
+        .speaker { font-weight: bold; color: #555; margin-right: 5px; }
+
+        select {
+            padding: 4px 8px;
+            font-size: 1rem;
+            border: 2px solid var(--taxi-yellow);
+            border-radius: 6px;
+            background-color: white;
+            cursor: pointer;
+            outline: none;
+            font-family: inherit;
+            transition: all 0.3s;
+            font-style: normal; /* Keine Kursivschrift */
+        }
+
+        select.correct {
+            border-color: var(--success);
+            background-color: #e8f5e9;
+            color: #1b5e20;
+        }
+
+        select.incorrect {
+            border-color: var(--error);
+            background-color: #ffebee;
+            color: #b71c1c;
+        }
+
+        .audio-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            vertical-align: middle;
+            margin-right: 5px;
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .btn-solution { background: #3498db; color: white; }
+        .btn-reset { background: #333; color: white; }
+
+        @media (max-width: 600px) {
+            .dialogue-box { font-size: 1rem; line-height: 2.5; padding: 15px; }
+            select { width: 100%; margin: 5px 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚕 Диалог: Багаж и оплата</h1>
+    
+    <div class="dialogue-box">
+        <span class="line">
+            <button class="audio-btn" onclick="speakLine(0)">🔊</button>
+            <span class="speaker">П:</span> Помогите мне положить чемодан в 
+            <select id="gap-0" onchange="check(0)">
+                <option value="">...</option>
+                <option value="багаж">багаж</option>
+                <option value="багажник">багажник</option>
+                <option value="машину">машину</option>
+            </select>.
+        </span>
+
+        <span class="line">
+            <button class="audio-btn" onclick="speakLine(1)">🔊</button>
+            <span class="speaker">В:</span> Вы будете платить наличными или 
+            <select id="gap-1" onchange="check(1)">
+                <option value="">...</option>
+                <option value="карта">карта</option>
+                <option value="картой">картой</option>
+                <option value="деньги">деньги</option>
+            </select>?
+        </span>
+
+        <span class="line">
+            <button class="audio-btn" onclick="speakLine(2)">🔊</button>
+            <span class="speaker">П:</span> 
+            <select id="gap-2" onchange="check(2)">
+                <option value="">...</option>
+                <option value="Карта">Карта</option>
+                <option value="Картой">Картой</option>
+                <option value="Наличные">Наличные</option>
+            </select>, пожалуйста. Вы можете 
+            <select id="gap-3" onchange="check(3)">
+                <option value="">...</option>
+                <option value="высадить">высадить</option>
+                <option value="выйти">выйти</option>
+                <option value="выходить">выходить</option>
+            </select> меня здесь?
+        </span>
+
+        <span class="line">
+            <button class="audio-btn" onclick="speakLine(3)">🔊</button>
+            <span class="speaker">В:</span> Да, я остановлю после 
+            <select id="gap-4" onchange="check(4)">
+                <option value="">...</option>
+                <option value="перекрёстка">перекрёстка</option>
+                <option value="магазина">магазиna</option>
+                <option value="пешеходного перехода">пешеходного перехода</option>
+            </select>.
+        </span>
+
+        <span class="line">
+            <button class="audio-btn" onclick="speakLine(4)">🔊</button>
+            <span class="speaker">П:</span> Спасибо! Оставьте себе 
+            <select id="gap-5" onchange="check(5)">
+                <option value="">...</option>
+                <option value="деньги">деньги</option>
+                <option value="чай">чай</option>
+                <option value="сдачу">сдачу</option>
+            </select> на чай.
+        </span>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-solution" onclick="showSolution()">Lösung anzeigen</button>
+        <button class="btn btn-reset" onclick="location.reload()">Neustart</button>
+    </div>
+</div>
+
+<script>
+    const answers = ["багажник", "картой", "Картой", "высадить", "пешеходного перехода", "сдачу"];
+    
+    // Sprecher-Rollen für Audio (0=Passagier, 1=Fahrer)
+    const speakers = [0, 1, 0, 1, 0]; 
+
+    let maleVoice = null;
+
+    function loadVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        maleVoice = voices.find(v => v.lang.startsWith('ru') && 
+            (v.name.includes('Pavel') || v.name.includes('Maxim') || v.name.includes('Male'))) 
+            || voices.find(v => v.lang.startsWith('ru'));
+    }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    function check(index) {
+        const select = document.getElementById(`gap-${index}`);
+        if (select.value === answers[index]) {
+            select.className = "correct";
+            speakLine(index);
+        } else if (select.value === "") {
+            select.className = "";
+        } else {
+            select.className = "incorrect";
+        }
+    }
+
+    function speakLine(lineIndex) {
+        window.speechSynthesis.cancel();
+        
+        // Den aktuellen Text der Zeile zusammenbauen (mit gewählten Werten)
+        let lineText = "";
+        if(lineIndex === 0) lineText = "Помогите мне положить чемодан в " + (document.getElementById('gap-0').value || "...");
+        if(lineIndex === 1) lineText = "Вы будете платить наличными или " + (document.getElementById('gap-1').value || "...");
+        if(lineIndex === 2) lineText = (document.getElementById('gap-2').value || "...") + ", пожалуйста. Вы можете " + (document.getElementById('gap-3').value || "...") + " меня здесь?";
+        if(lineIndex === 3) lineText = "Да, я остановлю после " + (document.getElementById('gap-4').value || "...");
+        if(lineIndex === 4) lineText = "Спасибо! Оставьте себе " + (document.getElementById('gap-5').value || "...") + " на чай.";
+
+        const msg = new SpeechSynthesisUtterance(lineText);
+        if (maleVoice) {
+            // Fahrer (Zeilen 1 und 3) bekommt tieferen Pitch
+            msg.voice = maleVoice;
+            msg.pitch = (speakers[lineIndex] === 1) ? 0.8 : 1.1;
+            msg.rate = 0.85;
+        }
+        window.speechSynthesis.speak(msg);
+    }
+
+    function showSolution() {
+        answers.forEach((ans, i) => {
+            const select = document.getElementById(`gap-${i}`);
+            select.value = ans;
+            select.className = "correct";
+        });
+    }
+
+    init();
+</script>
+
+</body>
+</html>
