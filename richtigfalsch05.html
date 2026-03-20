@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch: Правда или Ложь</title>
+    <style>
+        :root {
+            --taxi-yellow: #f1c40f;
+            --true-green: #27ae60;
+            --false-red: #e74c3c;
+            --bg: #f8f9fa;
+            --dark: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 25px;
+            align-self: center;
+        }
+
+        h1 { text-align: center; color: var(--dark); font-size: 1.5rem; margin-bottom: 5px; }
+        .sub { text-align: center; color: #7f8c8d; margin-bottom: 25px; font-size: 0.9rem; }
+
+        .statement-card {
+            background: #fff;
+            border: 2px solid #edf2f7;
+            border-radius: 15px;
+            padding: 30px 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.3s;
+        }
+
+        .statement-text {
+            font-size: 1.25rem;
+            color: var(--dark);
+            font-weight: 500;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .choice-btn {
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .btn-true { background-color: var(--true-green); }
+        .btn-false { background-color: var(--false-red); }
+
+        .choice-btn:hover:not(:disabled) { transform: translateY(-3px); opacity: 0.9; }
+        .choice-btn:disabled { opacity: 0.5; cursor: default; }
+
+        .choice-btn span { font-size: 0.8rem; font-weight: normal; opacity: 0.9; }
+
+        .feedback {
+            text-align: center;
+            margin-top: 20px;
+            font-weight: bold;
+            min-height: 24px;
+            font-size: 1.1rem;
+        }
+
+        .progress-dots {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 30px;
+        }
+
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: #ddd; }
+        .dot.active { background: var(--taxi-yellow); }
+        .dot.correct { background: var(--true-green); }
+        .dot.wrong { background: var(--false-red); }
+
+        .audio-btn {
+            background: var(--dark);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .final-screen { display: none; text-align: center; }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .app-container { padding: 20px; }
+            .statement-text { font-size: 1.1rem; }
+            .btn-group { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container" id="quizBox">
+    <h1>🚕 Правда или Ложь?</h1>
+    <p class="sub">Höre die Aussage und entscheide: Wahr oder Falsch?</p>
+
+    <div id="game-ui">
+        <div class="statement-card">
+            <button class="audio-btn" id="playAudio">🔊</button>
+            <div class="statement-text" id="statementText">Lade Aussage...</div>
+        </div>
+
+        <div class="btn-group">
+            <button class="choice-btn btn-true" onclick="handleChoice(true)">
+                Правда
+                <span>(Wahr)</span>
+            </button>
+            <button class="choice-btn btn-false" onclick="handleChoice(false)">
+                Ложь
+                <span>(Falsch)</span>
+            </button>
+        </div>
+
+        <div class="feedback" id="feedback"></div>
+        <div class="progress-dots" id="dots"></div>
+    </div>
+
+    <div class="final-screen" id="finalScreen">
+        <h2 id="finalTitle">Fertig!</h2>
+        <p id="finalScoreText"></p>
+        <button onclick="location.reload()" style="padding:12px 25px; border:none; background:var(--taxi-yellow); border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Neu starten</button>
+    </div>
+</div>
+
+<script>
+    const statements = [
+        { text: "Поездка будет стоить 500 рублей.", isTrue: false, explain: "Нет, поездка стоит 540 рублей." },
+        { text: "Пассажир едет на улицу Толстого.", isTrue: true, explain: "Да, это адрес назначения." },
+        { text: "Машина такси — синяя Киа Рио.", isTrue: true, explain: "Правильно, это синяя машина." },
+        { text: "В такси нельзя платить картой.", isTrue: false, explain: "Неверно, можно платить картой или наличными." },
+        { text: "Слово «такси» — среднего рода.", isTrue: true, explain: "Да, такси — оно (средний род)." },
+        { text: "Чемодан нужно положить в багажник.", isTrue: true, explain: "Да, водитель поможет убрать багаж." }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let maleVoice = null;
+
+    function loadVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        maleVoice = voices.find(v => v.lang.startsWith('ru') && 
+            (v.name.includes('Pavel') || v.name.includes('Maxim') || v.name.includes('Male'))) 
+            || voices.find(v => v.lang.startsWith('ru'));
+    }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    function speak(text) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        if (maleVoice) {
+            msg.voice = maleVoice;
+            msg.pitch = 0.9;
+            msg.rate = 0.85;
+        }
+        window.speechSynthesis.speak(msg);
+    }
+
+    function initDots() {
+        const container = document.getElementById('dots');
+        statements.forEach((_, i) => {
+            const dot = document.createElement('div');
+            dot.className = 'dot';
+            dot.id = `dot-${i}`;
+            container.appendChild(dot);
+        });
+    }
+
+    function loadStatement() {
+        const s = statements[currentIdx];
+        document.getElementById('statementText').textContent = s.text;
+        document.getElementById('dot-' + currentIdx).classList.add('active');
+        document.getElementById('feedback').textContent = "";
+        document.querySelectorAll('.choice-btn').forEach(b => b.disabled = false);
+        
+        document.getElementById('playAudio').onclick = () => speak(s.text);
+    }
+
+    function handleChoice(choice) {
+        const s = statements[currentIdx];
+        const feedback = document.getElementById('feedback');
+        const dot = document.getElementById('dot-' + currentIdx);
+        
+        document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+
+        if (choice === s.isTrue) {
+            score++;
+            feedback.style.color = "var(--true-green)";
+            feedback.textContent = "Правильно! ✓";
+            dot.classList.add('correct');
+        } else {
+            feedback.style.color = "var(--false-red)";
+            feedback.textContent = s.explain;
+            dot.classList.add('wrong');
+        }
+
+        setTimeout(() => {
+            currentIdx++;
+            if (currentIdx < statements.length) {
+                loadStatement();
+            } else {
+                showFinal();
+            }
+        }, 2000);
+    }
+
+    function showFinal() {
+        document.getElementById('game-ui').style.display = 'none';
+        document.getElementById('finalScreen').style.display = 'block';
+        document.getElementById('finalScoreText').textContent = `Du hast ${score} von ${statements.length} Aussagen richtig erkannt.`;
+        
+        if(score === statements.length) {
+            document.getElementById('finalTitle').textContent = "Идеально! 🎉";
+        }
+    }
+
+    initDots();
+    loadStatement();
+</script>
+
+</body>
+</html>
