@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch: Bild-Wort-Zuordnung</title>
+    <style>
+        :root {
+            --taxi-yellow: #f1c40f;
+            --dark: #2c3e50;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 700px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        h1 { text-align: center; color: var(--dark); font-size: 1.5rem; margin-bottom: 5px; }
+        .instruction { text-align: center; color: #7f8c8d; margin-bottom: 25px; }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .match-card {
+            background: white;
+            border: 2px solid #edf2f7;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 55px;
+            font-size: 1.05rem;
+            user-select: none;
+            /* Sicherstellen, dass alles kleingeschrieben bleibt */
+            text-transform: lowercase; 
+        }
+
+        .match-card.image-card { 
+            font-size: 2.2rem; 
+            text-transform: none; /* Emojis nicht beeinflussen */
+        }
+
+        .match-card:hover:not(.matched) {
+            border-color: var(--taxi-yellow);
+            background: #fffdf0;
+        }
+
+        .match-card.selected {
+            border-color: var(--taxi-yellow);
+            background: var(--taxi-yellow);
+            color: var(--dark);
+            transform: scale(1.02);
+        }
+
+        .match-card.matched {
+            background: #d4edda;
+            border-color: var(--success);
+            color: #155724;
+            cursor: default;
+            opacity: 0.7;
+        }
+
+        .match-card.shake {
+            animation: shake 0.4s;
+            border-color: var(--error);
+            background: #f8d7da;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+
+        .controls { text-align: center; }
+        .btn-reset {
+            padding: 12px 25px;
+            background: var(--dark);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Mobile */
+        @media (max-width: 500px) {
+            .match-card.image-card { font-size: 1.8rem; }
+            .match-card { font-size: 0.9rem; min-height: 50px; }
+            .game-grid { gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚕 Bilder & Wörter</h1>
+    <p class="instruction">Ordne das Bild dem passenden Wort zu.</p>
+
+    <div class="game-grid">
+        <div class="column" id="imageColumn"></div>
+        <div class="column" id="wordColumn"></div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-reset" onclick="initGame()">Neu mischen</button>
+    </div>
+</div>
+
+<script>
+    // Alle russischen Wörter sind hier kleingeschrieben
+    const items = [
+        { id: 1, img: "🚕", word: "такси" },
+        { id: 2, img: "📞", word: "вызвать такси" },
+        { id: 3, img: "🧳", word: "багажник" },
+        { id: 4, img: "📍", word: "адрес" },
+        { id: 5, img: "💵", word: "наличные" },
+        { id: 6, img: "💳", word: "карта" },
+        { id: 7, img: "🪙", word: "сдача" },
+        { id: 8, img: "☕", word: "чаевые" }
+    ];
+
+    let selectedImg = null;
+    let selectedWord = null;
+    let maleVoice = null;
+
+    function loadVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        maleVoice = voices.find(v => v.lang.startsWith('ru') && 
+            (v.name.includes('Pavel') || v.name.includes('Maxim') || v.name.includes('Male'))) 
+            || voices.find(v => v.lang.startsWith('ru'));
+    }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    function speak(text) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        if (maleVoice) {
+            msg.voice = maleVoice;
+            msg.pitch = 0.9;
+            msg.rate = 0.85;
+        }
+        window.speechSynthesis.speak(msg);
+    }
+
+    function initGame() {
+        const imgCol = document.getElementById('imageColumn');
+        const wordCol = document.getElementById('wordColumn');
+        
+        imgCol.innerHTML = '';
+        wordCol.innerHTML = '';
+        selectedImg = null;
+        selectedWord = null;
+
+        const shuffledImgs = [...items].sort(() => Math.random() - 0.5);
+        shuffledImgs.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'match-card image-card';
+            div.textContent = item.img;
+            div.onclick = () => selectItem(div, item, 'img');
+            imgCol.appendChild(div);
+        });
+
+        const shuffledWords = [...items].sort(() => Math.random() - 0.5);
+        shuffledWords.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'match-card';
+            div.textContent = item.word;
+            div.onclick = () => selectItem(div, item, 'word');
+            wordCol.appendChild(div);
+        });
+    }
+
+    function selectItem(element, data, type) {
+        if (element.classList.contains('matched')) return;
+
+        if (type === 'img') {
+            document.querySelectorAll('#imageColumn .match-card').forEach(c => c.classList.remove('selected'));
+            selectedImg = { element, id: data.id };
+            element.classList.add('selected');
+        } else {
+            document.querySelectorAll('#wordColumn .match-card').forEach(c => c.classList.remove('selected'));
+            selectedWord = { element, id: data.id, text: data.word };
+            element.classList.add('selected');
+        }
+
+        if (selectedImg && selectedWord) {
+            if (selectedImg.id === selectedWord.id) {
+                selectedImg.element.classList.add('matched');
+                selectedWord.element.classList.add('matched');
+                selectedImg.element.classList.remove('selected');
+                selectedWord.element.classList.remove('selected');
+                speak(selectedWord.text);
+                selectedImg = null;
+                selectedWord = null;
+            } else {
+                const imgEl = selectedImg.element;
+                const wordEl = selectedWord.element;
+                imgEl.classList.add('shake');
+                wordEl.classList.add('shake');
+                
+                setTimeout(() => {
+                    imgEl.classList.remove('shake', 'selected');
+                    wordEl.classList.remove('shake', 'selected');
+                }, 400);
+                
+                selectedImg = null;
+                selectedWord = null;
+            }
+        }
+    }
+
+    initGame();
+</script>
+
+</body>
+</html>
