@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Lernkartei - Taxi & Transport</title>
+    <style>
+        :root {
+            --primary-green: #2e7d32;
+            --light-green: #e8f5e9;
+            --accent-green: #4caf50;
+            --dark-green: #1b5e20;
+            --text-color: #333;
+            --white: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-green);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--dark-green);
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+        }
+
+        .progress {
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: var(--primary-green);
+        }
+
+        /* Flashcard Styles */
+        .card-container {
+            perspective: 1000px;
+            width: 100%;
+            height: 300px;
+            cursor: pointer;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-radius: 15px;
+        }
+
+        .card.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            box-sizing: border-box;
+            border-radius: 15px;
+            background: var(--white);
+            border: 4px solid var(--primary-green);
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+            background-color: var(--light-green);
+        }
+
+        .vocab-text {
+            font-weight: bold;
+            text-align: center;
+            word-wrap: break-word;
+            max-width: 100%;
+        }
+
+        /* Dynamic Font Sizing based on text length */
+        .size-small { font-size: 1.2rem; }
+        .size-medium { font-size: 1.8rem; }
+        .size-large { font-size: 2.5rem; }
+
+        .hint {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Controls */
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-color: var(--primary-green);
+            color: var(--white);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background-color: var(--dark-green);
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background-color: #689f38;
+            grid-column: span 1;
+        }
+
+        .full-width {
+            grid-column: span 2;
+        }
+
+        .instructions {
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: var(--primary-green);
+            line-height: 1.4;
+        }
+
+        @media (max-width: 480px) {
+            .card-container { height: 250px; }
+            h1 { font-size: 1.4rem; }
+            .size-large { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Russisch Lernkartei</h1>
+    <div class="progress" id="progress">1 / 70</div>
+
+    <div class="card-container" id="cardContainer" onclick="flipCard()">
+        <div class="card" id="cardElement">
+            <div class="card-face card-front">
+                <div id="frontText" class="vocab-text">Laden...</div>
+            </div>
+            <div class="card-face card-back">
+                <div id="backText" class="vocab-text">Laden...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" onclick="prevCard()">← Vorherige</button>
+        <button class="btn" onclick="nextCard()">Nächste →</button>
+        <button class="btn btn-secondary" onclick="shuffleCards()">🔀 Mischen</button>
+        <button class="btn btn-secondary" onclick="resetToStart()">🏠 An den Anfang</button>
+    </div>
+
+    <div class="instructions">
+        Tippe auf die Karte oder nutze die <b>Leertaste</b> zum Umdrehen.<br>
+        Nutze die <b>Pfeiltasten (← →)</b> zum Navigieren.
+    </div>
+</div>
+
+<script>
+    const vocabularyData = [
+        ["та́кси", "Taxi"], ["такси́ст", "Taxifahrer"], ["води́тель та́кси", "Taxifahrer"], ["пассажи́р", "Passagier"],
+        ["маши́на", "Auto"], ["зака́зывать / заказа́ть", "bestellen"], ["вызыва́ть / вы́звать", "rufen / bestellen (Taxi, Arzt)"],
+        ["звони́ть / позвони́ть", "anrufen / telefonieren"], ["приложе́ние", "App / Anwendung"], ["но́мер", "Nummer"],
+        ["а́дрес", "Adresse"], ["у́лица", "Straße"], ["дом", "Haus"], ["забира́ть / забра́ть", "abholen"],
+        ["е́хать / пое́хать", "fahren"], ["куда́", "wohin"], ["отку́да", "von wo / woher"], ["ждать / подожда́ть", "warten"],
+        ["сто́ить", "kosten"], ["сто́имость", "Preis / Kosten"], ["пое́здка", "Fahrt"], ["зака́з", "Bestellung / Auftrag"],
+        ["опла́чивать / оплати́ть", "bezahlen (etwas)"], ["плати́ть / заплати́ть", "bezahlen (für etwas)"], ["нали́чные", "Bargeld"],
+        ["ка́рта", "Karte"], ["ба́нковская ка́рта", "Bankkarte"], ["сда́ча", "Wechselgeld"], ["чаевы́е", "Trinkgeld"],
+        ["на чай", "als Trinkgeld"], ["оставля́ть / оста́вить", "hinterlassen / lassen"], ["дава́ть / дать", "geben"],
+        ["бага́ж", "Gepäck"], ["чемода́н", "Koffer"], ["бага́жник", "Kofferraum"], ["кла́сть / положи́ть", "legen / stellen"],
+        ["открыва́ть / откры́ть", "öffnen"], ["закрыва́ть / закры́ть", "schließen"], ["блоки́ровать / заблоки́ровать", "sperren / verriegeln"],
+        ["дверь", "Tür"], ["сади́ться / сесть", "sich setzen / einsteigen"], ["выходи́ть / вы́йти", "hinausgehen / aussteigen"],
+        ["выса́живать / вы́садить", "absetzen / aussteigen lassen"], ["остана́вливать / останови́ть", "anhalten"], ["тормози́ть / затормози́ть", "bremsen"],
+        ["опа́здывать / опозда́ть", "sich verspäten / zu spät kommen"], ["бы́стро", "schnell"], ["быстре́е", "schneller"],
+        ["аккура́тно", "vorsichtig / ordentlich"], ["пешехо́дный перехо́д", "Zebrastreifen / Fußgängerübergang"], ["перекрёсток", "Kreuzung"],
+        ["у́гол", "Ecke"], ["о́коло", "neben / beim / in der Nähe von"], ["по́сле", "nach / hinter"], ["за", "hinter / für"],
+        ["из", "aus"], ["в", "in / nach (Richtung)"], ["на", "auf / zu"], ["про́бка", "Stau"], ["торго́вый центр", "Einkaufszentrum"],
+        ["ма́ленький го́род", "Kleinstadt"], ["роди́тели", "Eltern"], ["без пробле́м", "kein Problem"], ["не про́тив", "nichts dagegen haben"],
+        ["здра́вствуй / здра́вствуйте", "Hallo / Guten Tag"], ["до свида́ния", "Auf Wiedersehen"], ["спаси́бо", "Danke"],
+        ["пожа́луйста", "Bitte"], ["мочь / смочь", "können"], ["хоте́ть / захоте́ть", "wollen"]
+    ];
+
+    let currentOrder = [...Array(vocabularyData.length).keys()];
+    let currentIndex = 0;
+    let isFlipped = false;
+
+    const cardElement = document.getElementById('cardElement');
+    const frontText = document.getElementById('frontText');
+    const backText = document.getElementById('backText');
+    const progress = document.getElementById('progress');
+
+    function updateCard() {
+        isFlipped = false;
+        cardElement.classList.remove('is-flipped');
+        
+        const dataIndex = currentOrder[currentIndex];
+        const [ru, de] = vocabularyData[dataIndex];
+
+        frontText.textContent = ru;
+        backText.textContent = de;
+
+        // Font-Size Logic
+        applyFontSize(frontText, ru);
+        applyFontSize(backText, de);
+
+        progress.textContent = `${currentIndex + 1} / ${vocabularyData.length}`;
+    }
+
+    function applyFontSize(element, text) {
+        element.classList.remove('size-small', 'size-medium', 'size-large');
+        if (text.length > 30) {
+            element.classList.add('size-small');
+        } else if (text.length > 15) {
+            element.classList.add('size-medium');
+        } else {
+            element.classList.add('size-large');
+        }
+    }
+
+    function flipCard() {
+        isFlipped = !isFlipped;
+        cardElement.classList.toggle('is-flipped');
+    }
+
+    function nextCard() {
+        if (currentIndex < vocabularyData.length - 1) {
+            currentIndex++;
+            updateCard();
+        } else {
+            // Animation bei Ende des Stapels
+            cardElement.style.transform = isFlipped ? 'rotateY(180deg) scale(1.05)' : 'scale(1.05)';
+            setTimeout(() => {
+                cardElement.style.transform = isFlipped ? 'rotateY(180deg)' : '';
+            }, 100);
+        }
+    }
+
+    function prevCard() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            updateCard();
+        }
+    }
+
+    function shuffleCards() {
+        for (let i = currentOrder.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [currentOrder[i], currentOrder[j]] = [currentOrder[j], currentOrder[i]];
+        }
+        currentIndex = 0;
+        updateCard();
+    }
+
+    function resetToStart() {
+        currentIndex = 0;
+        updateCard();
+    }
+
+    // Keyboard controls
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' || e.code === 'Enter') {
+            e.preventDefault(); // Verhindert Scrollen bei Leertaste
+            flipCard();
+        } else if (e.code === 'ArrowRight') {
+            nextCard();
+        } else if (e.code === 'ArrowLeft') {
+            prevCard();
+        } else if (e.code === 'Home') {
+            resetToStart();
+        }
+    });
+
+    // Initial load
+    updateCard();
+</script>
+
+</body>
+</html>
