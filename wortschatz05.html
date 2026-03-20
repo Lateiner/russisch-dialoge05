@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch: Synonyme finden</title>
+    <style>
+        :root {
+            --taxi-yellow: #f1c40f;
+            --dark-blue: #2c3e50;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 700px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 25px;
+            align-self: center;
+        }
+
+        h1 { text-align: center; color: var(--dark-blue); font-size: 1.5rem; margin-bottom: 10px; }
+        .instruction { text-align: center; color: #666; margin-bottom: 30px; line-height: 1.4; }
+
+        .sentence-row {
+            background: #fdfdfd;
+            border: 1px solid #eee;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .original-sentence {
+            /* Kursivschrift entfernt */
+            font-style: normal; 
+            color: #7f8c8d;
+            font-size: 0.95rem;
+        }
+
+        .original-sentence b {
+            color: var(--dark-blue);
+            text-decoration: underline;
+        }
+
+        .reformulate-area {
+            font-size: 1.15rem;
+            color: var(--dark-blue);
+            line-height: 1.6;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        select {
+            padding: 6px 10px;
+            font-size: 1rem;
+            border: 2px solid var(--taxi-yellow);
+            border-radius: 6px;
+            background-color: white;
+            cursor: pointer;
+            outline: none;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+
+        select.correct {
+            border-color: var(--success);
+            background-color: #e8f5e9;
+            color: #1b5e20;
+        }
+
+        select.incorrect {
+            border-color: var(--error);
+            background-color: #ffebee;
+            color: #b71c1c;
+        }
+
+        .audio-btn {
+            background: var(--dark-blue);
+            color: white;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-action {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .btn-solution { background: #3498db; color: white; }
+        .btn-reset { background: #333; color: white; }
+
+        .score-display {
+            text-align: center;
+            margin-top: 20px;
+            font-weight: bold;
+            color: var(--dark-blue);
+        }
+
+        @media (max-width: 600px) {
+            .reformulate-area { font-size: 1rem; }
+            select { width: 100%; margin-top: 5px; }
+            .sentence-row { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Синонимы (Synonyme)</h1>
+    <p class="instruction">Ersetze das unterstrichene Wort durch ein passendes Synonym aus dem Video.</p>
+
+    <div id="exerciseList"></div>
+
+    <div class="score-display" id="scoreText">Richtig: 0 / 5</div>
+
+    <div class="controls">
+        <button class="btn-action btn-solution" onclick="showAllSolutions()">Lösung anzeigen</button>
+        <button class="btn-action btn-reset" onclick="location.reload()">Neustart</button>
+    </div>
+</div>
+
+<script>
+    const data = [
+        {
+            original: "Я хочу <b>заказать</b> такси.",
+            pre: "Я хочу",
+            post: "такси.",
+            correct: "вызвать",
+            options: ["вызвать", "купить", "показать"]
+        },
+        {
+            original: "Это <b>водитель такси</b>.",
+            pre: "Это",
+            post: ".",
+            correct: "таксист",
+            options: ["таксист", "пассажир", "багажник"]
+        },
+        {
+            original: "Нужно <b>оплатить</b> поездку.",
+            pre: "Нужно",
+            post: "за поездку.",
+            correct: "заплатить",
+            options: ["заплатить", "сдача", "стоять"]
+        },
+        {
+            original: "Я использую <b>программу</b> Яндекс Go.",
+            pre: "Я использую",
+            post: "Яндекс Go.",
+            correct: "приложение",
+            options: ["приложение", "номер", "телефон"]
+        },
+        {
+            original: "Вы можете <b>высадить</b> меня здесь?",
+            pre: "Вы можете",
+            post: "меня здесь?",
+            correct: "остановить",
+            options: ["остановить", "позвонить", "выехать"]
+        }
+    ];
+
+    let maleVoice = null;
+
+    function loadVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        maleVoice = voices.find(v => v.lang.startsWith('ru') && 
+            (v.name.includes('Pavel') || v.name.includes('Maxim') || v.name.includes('Male') || v.name.includes('Stefan'))) 
+            || voices.find(v => v.lang.startsWith('ru'));
+    }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    function speak(text) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        if (maleVoice) {
+            msg.voice = maleVoice;
+            msg.pitch = 0.85;
+            msg.rate = 0.85;
+        }
+        window.speechSynthesis.speak(msg);
+    }
+
+    function init() {
+        const list = document.getElementById('exerciseList');
+        data.forEach((item, idx) => {
+            const row = document.createElement('div');
+            row.className = 'sentence-row';
+            
+            const shuffledOptions = [...item.options].sort(() => Math.random() - 0.5);
+
+            row.innerHTML = `
+                <div class="original-sentence">Original: ${item.original}</div>
+                <div class="reformulate-area">
+                    <button class="audio-btn" onclick="speak('${item.pre} ${item.correct} ${item.post}')">🔊</button>
+                    <span>${item.pre}</span>
+                    <select id="sel-${idx}" onchange="check(this, '${item.correct}', '${item.pre}', '${item.post}')">
+                        <option value="">...</option>
+                        ${shuffledOptions.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                    </select>
+                    <span>${item.post}</span>
+                </div>
+            `;
+            list.appendChild(row);
+        });
+    }
+
+    function check(select, correctAnswer, pre, post) {
+        if (select.value === correctAnswer) {
+            select.className = "correct";
+            speak(`${pre} ${correctAnswer} ${post}`);
+        } else if (select.value === "") {
+            select.className = "";
+        } else {
+            select.className = "incorrect";
+        }
+        updateScore();
+    }
+
+    function updateScore() {
+        const selects = document.querySelectorAll('select');
+        let correct = 0;
+        selects.forEach(s => { if(s.classList.contains('correct')) correct++; });
+        document.getElementById('scoreText').textContent = `Richtig: ${correct} / ${data.length}`;
+    }
+
+    function showAllSolutions() {
+        data.forEach((item, idx) => {
+            const select = document.getElementById(`sel-${idx}`);
+            select.value = item.correct;
+            select.className = "correct";
+        });
+        updateScore();
+    }
+
+    init();
+</script>
+
+</body>
+</html>
