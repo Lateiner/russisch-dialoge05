@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Quiz: Vokabeln Dialog 3</title>
+    <style>
+        :root {
+            --taxi-yellow: #f1c40f;
+            --dark-blue: #2c3e50;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .quiz-container {
+            max-width: 500px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 25px;
+            align-self: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            margin-bottom: 25px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--taxi-yellow);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .question-box {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .russian-word {
+            font-size: 1.8rem;
+            color: var(--dark-blue);
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: block;
+            text-transform: lowercase; /* Erzwingt Kleinschreibung */
+            font-style: normal; /* Verhindert Kursivschrift */
+        }
+
+        .audio-btn {
+            background: var(--dark-blue);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.3rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .audio-btn:hover { transform: scale(1.1); }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-btn {
+            background: white;
+            border: 2px solid #edf2f7;
+            padding: 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            text-align: center;
+            transition: all 0.2s;
+            font-style: normal; /* Keine Kursivschrift */
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--taxi-yellow);
+            background: #fffdf5;
+        }
+
+        .option-btn.correct {
+            background: #d4edda !important;
+            border-color: var(--success) !important;
+            color: #155724 !important;
+        }
+
+        .option-btn.incorrect {
+            background: #f8d7da !important;
+            border-color: var(--error) !important;
+            color: #721c24 !important;
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .control-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-restart { background: #333; color: white; }
+        .btn-solution { background: #3498db; color: white; }
+
+        .result-screen { display: none; text-align: center; }
+
+        @media (max-width: 480px) {
+            .russian-word { font-size: 1.5rem; }
+            .option-btn { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <div id="quiz-ui">
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        
+        <div class="question-box">
+            <span class="russian-word" id="wordDisplay">vokabel</span>
+            <button class="audio-btn" id="playAudio">🔊</button>
+        </div>
+
+        <div class="options-list" id="optionsList"></div>
+
+        <div class="controls">
+            <button class="control-btn btn-solution" id="solutionBtn" onclick="showSolution()">Lösung anzeigen</button>
+            <button class="control-btn btn-restart" onclick="location.reload()">Neustart</button>
+        </div>
+    </div>
+
+    <div class="result-screen" id="result-ui">
+        <h2>Fertig!</h2>
+        <p id="resultText"></p>
+        <button class="control-btn btn-restart" onclick="location.reload()" style="margin-top: 20px;">Nochmal versuchen</button>
+    </div>
+</div>
+
+<script>
+    // Russische Wörter sind hier kleingeschrieben
+    const vocabulary = [
+        { r: "багажник", d: "Kofferraum" },
+        { r: "чемодан", d: "Koffer" },
+        { r: "наличные", d: "Bargeld" },
+        { r: "карта", d: "Karte (Bankkarte)" },
+        { r: "сдача", d: "Wechselgeld" },
+        { r: "чаевые", d: "Trinkgeld" },
+        { r: "высадить", d: "absetzen / aussteigen lassen" },
+        { r: "перекрёсток", d: "Kreuzung" },
+        { r: "пешеходный переход", d: "Zebrastreifen" },
+        { r: "помочь", d: "helfen" }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let maleVoice = null;
+    let shuffledVocab = [];
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function loadVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        // Suche nach einer russischen Männerstimme
+        maleVoice = voices.find(v => v.lang.startsWith('ru') && 
+            (v.name.includes('Pavel') || v.name.includes('Maxim') || v.name.includes('Male'))) 
+            || voices.find(v => v.lang.startsWith('ru'));
+    }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    function speak(text) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        if (maleVoice) {
+            msg.voice = maleVoice;
+            msg.pitch = 0.85;
+            msg.rate = 0.85;
+        }
+        window.speechSynthesis.speak(msg);
+    }
+
+    function loadQuestion() {
+        const current = shuffledVocab[currentIdx];
+        document.getElementById('wordDisplay').textContent = current.r;
+        document.getElementById('playAudio').onclick = () => speak(current.r);
+        document.getElementById('solutionBtn').disabled = false;
+        
+        const list = document.getElementById('optionsList');
+        list.innerHTML = '';
+        
+        // Erstelle Optionen: 1 richtige und 2 zufällige falsche
+        let options = [current.d];
+        while (options.length < 3) {
+            let randomWord = vocabulary[Math.floor(Math.random() * vocabulary.length)].d;
+            if (!options.includes(randomWord)) options.push(randomWord);
+        }
+        
+        shuffle(options).forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = opt;
+            btn.onclick = () => handleChoice(opt, btn);
+            list.appendChild(btn);
+        });
+
+        document.getElementById('progressFill').style.width = `${(currentIdx / shuffledVocab.length) * 100}%`;
+    }
+
+    function handleChoice(selected, btn) {
+        const correct = shuffledVocab[currentIdx].d;
+        const allBtns = document.querySelectorAll('.option-btn');
+        allBtns.forEach(b => b.disabled = true);
+        document.getElementById('solutionBtn').disabled = true;
+
+        if (selected === correct) {
+            btn.classList.add('correct');
+            score++;
+        } else {
+            btn.classList.add('incorrect');
+            allBtns.forEach(b => {
+                if (b.textContent === correct) b.classList.add('correct');
+            });
+        }
+
+        setTimeout(() => {
+            currentIdx++;
+            if (currentIdx < shuffledVocab.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }, 1500);
+    }
+
+    function showSolution() {
+        const correct = shuffledVocab[currentIdx].d;
+        const allBtns = document.querySelectorAll('.option-btn');
+        allBtns.forEach(b => {
+            b.disabled = true;
+            if (b.textContent === correct) b.classList.add('correct');
+        });
+        document.getElementById('solutionBtn').disabled = true;
+        
+        setTimeout(() => {
+            currentIdx++;
+            if (currentIdx < shuffledVocab.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }, 2000);
+    }
+
+    function showResults() {
+        document.getElementById('quiz-ui').style.display = 'none';
+        document.getElementById('result-ui').style.display = 'block';
+        document.getElementById('resultText').textContent = `Du hast ${score} von ${shuffledVocab.length} Vokabeln richtig gewusst.`;
+        document.getElementById('progressFill').style.width = '100%';
+    }
+
+    // Spielstart: Vokabeln mischen
+    shuffledVocab = shuffle([...vocabulary]);
+    loadQuestion();
+</script>
+
+</body>
+</html>
