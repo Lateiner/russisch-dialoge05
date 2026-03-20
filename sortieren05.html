@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Training: Dialog sortieren</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --success: #27ae60;
+            --bg: #f0f3f5;
+            --text: #2c3e50;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        h1 { text-align: center; color: var(--primary); font-size: 1.5rem; margin-bottom: 10px; }
+        p.instructions { text-align: center; color: #666; margin-bottom: 25px; font-size: 0.95rem; }
+
+        .sortable-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sortable-item {
+            background: var(--card-bg);
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            user-select: none;
+            position: relative;
+        }
+
+        /* Feedback-Farben */
+        .sortable-item.correct {
+            border-color: var(--success);
+            background-color: #e8f5e9;
+        }
+
+        .sortable-item.dragging {
+            opacity: 0.5;
+            transform: scale(1.02);
+            background: #e1f5fe;
+        }
+
+        .handle {
+            color: #ccc;
+            font-size: 20px;
+            display: flex;
+            flex-direction: column;
+            cursor: grab;
+        }
+
+        .content {
+            flex-grow: 1;
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+
+        .controls-small {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .move-btn {
+            background: #eee;
+            border: none;
+            border-radius: 4px;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .move-btn:hover { background: #ddd; }
+
+        .footer {
+            margin-top: 25px;
+            text-align: center;
+        }
+
+        .btn-reset {
+            padding: 10px 20px;
+            background: var(--text);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .win-message {
+            display: none;
+            color: var(--success);
+            font-weight: bold;
+            margin-top: 15px;
+            text-align: center;
+            animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+        }
+
+        /* Mobile Optimierung */
+        @media (max-width: 480px) {
+            .container { padding: 15px; }
+            .content { font-size: 0.9rem; }
+            .sortable-item { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚕 Dialog sortieren</h1>
+    <p class="instructions">Bringe den Dialog in die richtige Reihenfolge. <br>Ziehe die Sätze oder nutze die Pfeile.</p>
+
+    <ul class="sortable-list" id="sortableList">
+        <!-- Items werden per JS eingefügt -->
+    </ul>
+
+    <div id="winMessage" class="win-message">🎉 Super! Der Dialog ist perfekt sortiert!</div>
+
+    <div class="footer">
+        <button class="btn-reset" onclick="shuffleAndRender()">Neu mischen</button>
+    </div>
+</div>
+
+<script>
+    const correctOrder = [
+        "— Здравствуйте! Я хочу заказать такси на улицу Твернадского, 20.",
+        "— Куда поедете?",
+        "— На улицу Толстого, 24.",
+        "— Поездка будет стоить 540 рублей.",
+        "— Хорошо. Сколько ждать?",
+        "— Пять — семь минут.",
+        "— Спасибо! До свидания."
+    ];
+
+    let currentItems = [...correctOrder];
+
+    function shuffleAndRender() {
+        // Mischen, bis es nicht mehr der richtigen Reihenfolge entspricht
+        do {
+            currentItems.sort(() => Math.random() - 0.5);
+        } while (JSON.stringify(currentItems) === JSON.stringify(correctOrder));
+        
+        renderList();
+        document.getElementById('winMessage').style.display = 'none';
+    }
+
+    function renderList() {
+        const list = document.getElementById('sortableList');
+        list.innerHTML = '';
+
+        currentItems.forEach((text, index) => {
+            const isCorrect = text === correctOrder[index];
+            
+            const li = document.createElement('li');
+            li.className = `sortable-item ${isCorrect ? 'correct' : ''}`;
+            li.draggable = true;
+            li.dataset.index = index;
+
+            li.innerHTML = `
+                <div class="handle">⋮⋮</div>
+                <div class="content">${text}</div>
+                <div class="controls-small">
+                    <button class="move-btn" onclick="move(${index}, -1)">▲</button>
+                    <button class="move-btn" onclick="move(${index}, 1)">▼</button>
+                </div>
+            `;
+
+            // Drag events
+            li.addEventListener('dragstart', handleDragStart);
+            li.addEventListener('dragover', handleDragOver);
+            li.addEventListener('drop', handleDrop);
+            li.addEventListener('dragend', handleDragEnd);
+
+            list.appendChild(li);
+        });
+        
+        checkWin();
+    }
+
+    // Pfeil-Steuerung
+    function move(index, direction) {
+        const newIndex = index + direction;
+        if (newIndex >= 0 && newIndex < currentItems.length) {
+            const temp = currentItems[index];
+            currentItems[index] = currentItems[newIndex];
+            currentItems[newIndex] = temp;
+            renderList();
+        }
+    }
+
+    // Drag & Drop Logik
+    let dragSrcIndex = null;
+
+    function handleDragStart(e) {
+        dragSrcIndex = this.dataset.index;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        return false;
+    }
+
+    function handleDrop(e) {
+        e.stopPropagation();
+        const targetIndex = this.dataset.index;
+
+        if (dragSrcIndex !== targetIndex) {
+            const temp = currentItems[dragSrcIndex];
+            currentItems.splice(dragSrcIndex, 1);
+            currentItems.splice(targetIndex, 0, temp);
+            renderList();
+        }
+        return false;
+    }
+
+    function handleDragEnd() {
+        this.classList.remove('dragging');
+    }
+
+    function checkWin() {
+        const isWin = JSON.stringify(currentItems) === JSON.stringify(correctOrder);
+        if (isWin) {
+            document.getElementById('winMessage').style.display = 'block';
+            // Alle Items als korrekt markieren
+            document.querySelectorAll('.sortable-item').forEach(item => {
+                item.classList.add('correct');
+                item.draggable = false;
+            });
+        }
+    }
+
+    // Initialer Start
+    shuffleAndRender();
+</script>
+
+</body>
+</html>
