@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch: Wer sagt was?</title>
+    <style>
+        :root {
+            --taxi-yellow: #f1c40f;
+            --operator-blue: #2c3e50;
+            --passenger-green: #27ae60;
+            --bg: #f4f7f6;
+            --error: #e74c3c;
+            --solution-color: #3498db;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        h1 { text-align: center; color: var(--operator-blue); font-size: 1.5rem; margin-bottom: 5px; text-transform: lowercase; }
+        .instruction { text-align: center; color: #7f8c8d; margin-bottom: 25px; }
+
+        .game-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .speaker-zone {
+            border: 3px dashed #ddd;
+            border-radius: 15px;
+            min-height: 350px;
+            padding: 15px;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #fafafa;
+        }
+
+        .speaker-zone.active-target {
+            border-color: var(--taxi-yellow);
+            background: #fffdf0;
+        }
+
+        .speaker-header {
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            color: white;
+            text-transform: lowercase;
+        }
+
+        .operator-header { background: var(--operator-blue); }
+        .passenger-header { background: var(--passenger-green); }
+
+        .pool-area {
+            grid-column: span 2;
+            background: #eee;
+            padding: 20px;
+            border-radius: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            min-height: 50px;
+        }
+
+        .sentence-card {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+            text-transform: lowercase;
+        }
+
+        .sentence-card:hover:not(.placed) { transform: translateY(-2px); box-shadow: 0 5px 12px rgba(0,0,0,0.15); }
+
+        .sentence-card.selected {
+            border-color: var(--taxi-yellow);
+            background: #fff9e6;
+        }
+
+        .sentence-card.placed {
+            cursor: pointer; /* Klickbar für Audio */
+            box-shadow: none;
+            width: 100%;
+            animation: popIn 0.3s ease;
+        }
+
+        .operator-side .placed { border-left: 5px solid var(--operator-blue); background: #eef2f7; }
+        .passenger-side .placed { border-left: 5px solid var(--passenger-green); background: #f0fdf4; }
+
+        @keyframes popIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .shake { animation: shake 0.4s; border-color: var(--error) !important; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .controls { 
+            text-align: center; 
+            margin-top: 30px; 
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button { 
+            padding: 12px 20px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: 0.2s;
+        }
+
+        .btn-reset { background: var(--operator-blue); color: white; }
+        .btn-solution { background: var(--solution-color); color: white; }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* Mobile */
+        @media (max-width: 600px) {
+            .game-area { grid-template-columns: 1fr; }
+            .pool-area { grid-column: span 1; }
+            .speaker-zone { min-height: 150px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚕 кто это говорит?</h1>
+    <p class="instruction">klicke einen satz an und dann auf das richtige feld.</p>
+
+    <div class="pool-area" id="pool"></div>
+
+    <div class="game-area">
+        <div class="speaker-zone operator-side" id="zone-operator" onclick="handleZoneClick('operator')">
+            <div class="speaker-header operator-header">оператор (männlich)</div>
+        </div>
+        <div class="speaker-zone passenger-side" id="zone-passenger" onclick="handleZoneClick('passenger')">
+            <div class="speaker-header passenger-header">пассажир</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-solution" onclick="showSolution()">lösung anzeigen</button>
+        <button class="btn-reset" onclick="location.reload()">neu starten</button>
+    </div>
+</div>
+
+<script>
+    const sentences = [
+        { text: "здравствуйте! откуда вас забрать?", speaker: "operator" },
+        { text: "я хочу заказать такси на улицу твернадского.", speaker: "passenger" },
+        { text: "куда поедете?", speaker: "operator" },
+        { text: "на улицу толстого, дом 24.", speaker: "passenger" },
+        { text: "поездка будет стоить 540 рублей.", speaker: "operator" },
+        { text: "хорошо. сколько ждать?", speaker: "passenger" },
+        { text: "пять — семь минут.", speaker: "operator" },
+        { text: "помогите положить чемодан в багажник.", speaker: "passenger" },
+        { text: "вы будете платить наличными или картой?", speaker: "operator" },
+        { text: "вы можете высадить меня здесь?", speaker: "passenger" }
+    ];
+
+    let selectedIdx = null;
+    let maleVoice = null;
+    let cards = [];
+
+    function loadVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        maleVoice = voices.find(v => v.lang.startsWith('ru') && 
+            (v.name.includes('Pavel') || v.name.includes('Maxim') || v.name.includes('Male'))) 
+            || voices.find(v => v.lang.startsWith('ru'));
+    }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    function speak(text, isOperator) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        if (isOperator && maleVoice) {
+            msg.voice = maleVoice;
+            msg.pitch = 0.85;
+            msg.rate = 0.85;
+        } else {
+            msg.lang = 'ru-RU';
+            msg.pitch = 1.1;
+            msg.rate = 0.9;
+        }
+        window.speechSynthesis.speak(msg);
+    }
+
+    function init() {
+        const pool = document.getElementById('pool');
+        const shuffled = [...sentences]
+            .map((s, i) => ({ ...s, originalIdx: i }))
+            .sort(() => Math.random() - 0.5);
+        
+        shuffled.forEach((s) => {
+            const card = document.createElement('div');
+            card.className = 'sentence-card';
+            card.textContent = s.text;
+            card.dataset.idx = s.originalIdx;
+            card.onclick = (e) => {
+                e.stopPropagation();
+                selectCard(card, s.originalIdx);
+            };
+            pool.appendChild(card);
+            cards.push({ element: card, data: s });
+        });
+    }
+
+    function selectCard(cardElement, idx) {
+        if (cardElement.classList.contains('placed')) return;
+        
+        document.querySelectorAll('.sentence-card').forEach(c => c.classList.remove('selected'));
+        selectedIdx = idx;
+        cardElement.classList.add('selected');
+        document.querySelectorAll('.speaker-zone').forEach(z => z.classList.add('active-target'));
+    }
+
+    function handleZoneClick(zone) {
+        if (selectedIdx === null) return;
+
+        const currentCard = cards.find(c => c.data.originalIdx === selectedIdx);
+        
+        if (currentCard.data.speaker === zone) {
+            placeCard(currentCard.element, zone);
+        } else {
+            currentCard.element.classList.add('shake');
+            setTimeout(() => currentCard.element.classList.remove('shake'), 400);
+        }
+    }
+
+    function placeCard(cardElement, zone) {
+        const targetZone = document.getElementById(`zone-${zone}`);
+        cardElement.classList.remove('selected');
+        cardElement.classList.add('placed');
+        
+        const text = cardElement.textContent;
+        cardElement.onclick = (e) => {
+            e.stopPropagation();
+            speak(text, zone === 'operator');
+        };
+        
+        targetZone.appendChild(cardElement);
+        speak(text, zone === 'operator');
+        
+        selectedIdx = null;
+        document.querySelectorAll('.speaker-zone').forEach(z => z.classList.remove('active-target'));
+    }
+
+    function showSolution() {
+        cards.forEach(c => {
+            if (!c.element.classList.contains('placed')) {
+                placeCard(c.element, c.data.speaker);
+            }
+        });
+        selectedIdx = null;
+    }
+
+    init();
+</script>
+
+</body>
+</html>
