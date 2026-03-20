@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Quiz: Taxi</title>
+    <style>
+        :root {
+            --taxi-yellow: #f1c40f;
+            --russia-blue: #2980b9;
+            --correct: #27ae60;
+            --incorrect: #c0392b;
+            --bg: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .quiz-container {
+            background: white;
+            max-width: 500px;
+            width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            padding: 25px;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #eee;
+            width: 100%;
+            border-radius: 3px;
+            margin-bottom: 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--russia-blue);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .question-box h2 {
+            font-size: 1.2rem;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-btn {
+            padding: 15px;
+            border: 2px solid #ecf0f1;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            font-size: 1rem;
+            text-align: left;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--taxi-yellow);
+            background: #fffdf5;
+        }
+
+        .option-btn.correct {
+            background-color: #d4edda;
+            border-color: var(--correct);
+            color: #155724;
+        }
+
+        .option-btn.incorrect {
+            background-color: #f8d7da;
+            border-color: var(--incorrect);
+            color: #721c24;
+        }
+
+        .audio-icon {
+            font-size: 1.2rem;
+            color: var(--russia-blue);
+        }
+
+        .result-screen {
+            text-align: center;
+            display: none;
+        }
+
+        .score-circle {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--russia-blue);
+            margin: 20px 0;
+        }
+
+        .btn-restart {
+            background: var(--taxi-yellow);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        /* Mobile */
+        @media (max-width: 480px) {
+            .quiz-container { padding: 15px; }
+            .question-box h2 { font-size: 1.1rem; }
+            .option-btn { font-size: 0.95rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <div id="quiz-ui">
+        <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+        <div class="question-box">
+            <h2 id="questionText">Frage lädt...</h2>
+            <div class="options-list" id="optionsList"></div>
+        </div>
+    </div>
+
+    <div id="result-ui" class="result-screen">
+        <h2>Quiz beendet!</h2>
+        <div class="score-circle" id="finalScore">0 / 0</div>
+        <p id="resultMessage"></p>
+        <button class="btn-restart" onclick="location.reload()">Neu starten</button>
+    </div>
+</div>
+
+<script>
+    const quizData = [
+        {
+            q: "Куда хочет поехать пассажир?",
+            a: [
+                { t: "На улицу Толстого, 24", c: true },
+                { t: "В аэропорт Шереметьево", c: false },
+                { t: "В маленький город", c: false },
+                { t: "Домой к родителям", c: false }
+            ]
+        },
+        {
+            q: "Сколько будет стоить поездка?",
+            a: [
+                { t: "450 рублей", c: false },
+                { t: "500 рублей", c: false },
+                { t: "540 рублей", c: true },
+                { t: "745 рублей", c: false }
+            ]
+        },
+        {
+            q: "Куда нужно положить чемодан?",
+            a: [
+                { t: "В салон такси", c: false },
+                { t: "В багажник", c: true },
+                { t: "В метро", c: false }
+            ]
+        },
+        {
+            q: "Как можно оплатить такси в приложении?",
+            a: [
+                { t: "Только наличными", c: false },
+                { t: "Банковской картой", c: true },
+                { t: "Бесплатно", c: false }
+            ]
+        },
+        {
+            q: "Какая машина приедет за пассажиром?",
+            a: [
+                { t: "Белый Мерседес", c: false },
+                { t: "Синяя Киа Рио", c: true },
+                { t: "Красная Лада", c: false }
+            ]
+        }
+    ];
+
+    let currentQ = 0;
+    let score = 0;
+    let maleVoice = null;
+
+    // Stimmen laden
+    function loadVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        maleVoice = voices.find(v => v.lang.startsWith('ru') && 
+            (v.name.includes('Pavel') || v.name.includes('Maxim') || v.name.includes('Male'))) 
+            || voices.find(v => v.lang.startsWith('ru'));
+    }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    function speak(text) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        if (maleVoice) {
+            msg.voice = maleVoice;
+            msg.pitch = 0.9;
+            msg.rate = 0.85;
+        }
+        window.speechSynthesis.speak(msg);
+    }
+
+    function loadQuestion() {
+        const data = quizData[currentQ];
+        document.getElementById('questionText').innerHTML = `
+            <span onclick="speak('${data.q}')" style="cursor:pointer">🔊</span> ${data.q}`;
+        
+        const list = document.getElementById('optionsList');
+        list.innerHTML = '';
+        
+        data.a.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerHTML = `<span class="audio-icon" onclick="event.stopPropagation(); speak('${opt.t}')">🔊</span> ${opt.t}`;
+            btn.onclick = () => handleAnswer(opt, btn);
+            list.appendChild(btn);
+        });
+
+        document.getElementById('progress').style.width = `${(currentQ / quizData.length) * 100}%`;
+    }
+
+    function handleAnswer(opt, btn) {
+        const btns = document.querySelectorAll('.option-btn');
+        btns.forEach(b => b.disabled = true);
+
+        if (opt.c) {
+            btn.classList.add('correct');
+            score++;
+        } else {
+            btn.classList.add('incorrect');
+            // Zeige die richtige Antwort
+            btns.forEach((b, i) => {
+                if (quizData[currentQ].a[i].c) b.classList.add('correct');
+            });
+        }
+
+        setTimeout(() => {
+            currentQ++;
+            if (currentQ < quizData.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }, 1500);
+    }
+
+    function showResults() {
+        document.getElementById('quiz-ui').style.display = 'none';
+        document.getElementById('result-ui').style.display = 'block';
+        document.getElementById('finalScore').textContent = `${score} / ${quizData.length}`;
+        
+        let msg = "";
+        if (score === quizData.length) msg = "Вы отлично всё поняли! 🎉";
+        else if (score >= 3) msg = "Хороший результат! 👍";
+        else msg = "Посмотрите видео ещё раз. 😉";
+        
+        document.getElementById('resultMessage').textContent = msg;
+    }
+
+    loadQuestion();
+</script>
+
+</body>
+</html>
