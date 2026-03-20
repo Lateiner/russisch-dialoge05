@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Hörverstehen: Wer spricht?</title>
+    <style>
+        :root {
+            --taxi-yellow: #f1c40f;
+            --driver-color: #2c3e50;
+            --passenger-color: #27ae60;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 550px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 25px;
+            align-self: center;
+        }
+
+        h1 { text-align: center; color: var(--driver-color); font-size: 1.5rem; margin-bottom: 5px; }
+        .instruction { text-align: center; color: #7f8c8d; margin-bottom: 25px; font-size: 0.9rem; }
+
+        .audio-card {
+            background: #fdfdfd;
+            border: 2px solid #eee;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .play-btn {
+            background: var(--taxi-yellow);
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .play-btn:hover { transform: scale(1.1); }
+
+        .sentence-display {
+            font-size: 1.2rem;
+            color: var(--driver-color);
+            min-height: 1.5em;
+            /* text-transform: lowercase wurde entfernt */
+            font-style: normal; /* Keine Kursivschrift */
+            line-height: 1.4;
+        }
+
+        .role-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .role-btn {
+            padding: 15px;
+            border: 2px solid #edf2f7;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            color: var(--driver-color);
+        }
+
+        .role-btn span { font-size: 0.8rem; font-weight: normal; color: #7f8c8d; }
+
+        .role-btn:hover:not(:disabled) { border-color: var(--taxi-yellow); background: #fffdf5; }
+
+        .role-btn.correct { background: #d4edda !important; border-color: var(--success) !important; color: #155724 !important; }
+        .role-btn.incorrect { background: #f8d7da !important; border-color: var(--error) !important; color: #721c24 !important; }
+
+        .controls {
+            margin-top: 25px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-action { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-solution { background: #3498db; color: white; }
+        .btn-reset { background: #333; color: white; }
+
+        .progress {
+            font-size: 0.9rem;
+            text-align: center;
+            margin-top: 15px;
+            color: #999;
+        }
+
+        @media (max-width: 480px) {
+            .role-buttons { grid-template-columns: 1fr; }
+            .container { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚕 Кто говорит?</h1>
+    <p class="instruction">Höre den Satz und entscheide, wer ihn im Dialog sagt.</p>
+
+    <div class="audio-card">
+        <button class="play-btn" id="playBtn">▶</button>
+        <div class="sentence-display" id="sentenceText">Klicke auf Play</div>
+    </div>
+
+    <div class="role-buttons">
+        <button class="role-btn" id="btn-driver" onclick="checkChoice('driver')">
+            Водитель
+            <span>(Fahrer)</span>
+        </button>
+        <button class="role-btn" id="btn-passenger" onclick="checkChoice('passenger')">
+            Пассажир
+            <span>(Passagier)</span>
+        </button>
+    </div>
+
+    <div class="progress" id="progressText">Satz 1 von 6</div>
+
+    <div class="controls">
+        <button class="btn-action btn-solution" id="solBtn" onclick="showSolution()">Lösung anzeigen</button>
+        <button class="btn-action btn-reset" onclick="location.reload()">Neustart</button>
+    </div>
+</div>
+
+<script>
+    // Russische Sätze mit korrekter Großschreibung
+    const dialogueData = [
+        { text: "Помогите мне положить чемодан в багажник.", role: "passenger" },
+        { text: "Да, конечно. Кладите!", role: "driver" },
+        { text: "Вы будете платить наличными или картой?", role: "driver" },
+        { text: "Картой, пожалуйста. Вы можете высадить меня здесь?", role: "passenger" },
+        { text: "Да, я остановлю после пешеходного перехода.", role: "driver" },
+        { text: "Спасибо! Оставьте себе сдачу на чай.", role: "passenger" }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let maleVoice = null;
+
+    function loadVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        // Bevorzuge männliche Stimmen für den Fahrer
+        maleVoice = voices.find(v => v.lang.startsWith('ru') && 
+            (v.name.includes('Pavel') || v.name.includes('Maxim') || v.name.includes('Male'))) 
+            || voices.find(v => v.lang.startsWith('ru'));
+    }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    function speak(text, role) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        if (maleVoice) {
+            msg.voice = (role === 'driver') ? maleVoice : null; // Falls vorhanden, Männerstimme für Fahrer
+            msg.pitch = (role === 'driver') ? 0.8 : 1.1; // Tieferer Pitch für Fahrer
+            msg.rate = 0.85;
+            msg.lang = 'ru-RU';
+        }
+        window.speechSynthesis.speak(msg);
+    }
+
+    function loadSentence() {
+        const data = dialogueData[currentIdx];
+        document.getElementById('sentenceText').textContent = data.text;
+        document.getElementById('playBtn').onclick = () => speak(data.text, data.role);
+        document.getElementById('progressText').textContent = `Satz ${currentIdx + 1} von ${dialogueData.length}`;
+        
+        // Reset buttons
+        const btnD = document.getElementById('btn-driver');
+        const btnP = document.getElementById('btn-passenger');
+        [btnD, btnP].forEach(b => {
+            b.classList.remove('correct', 'incorrect');
+            b.disabled = false;
+        });
+        document.getElementById('solBtn').disabled = false;
+    }
+
+    function checkChoice(choice) {
+        const correctRole = dialogueData[currentIdx].role;
+        const btnD = document.getElementById('btn-driver');
+        const btnP = document.getElementById('btn-passenger');
+        const selectedBtn = (choice === 'driver') ? btnD : btnP;
+
+        [btnD, btnP].forEach(b => b.disabled = true);
+        document.getElementById('solBtn').disabled = true;
+
+        if (choice === correctRole) {
+            selectedBtn.classList.add('correct');
+            score++;
+        } else {
+            selectedBtn.classList.add('incorrect');
+            const correctBtn = (correctRole === 'driver') ? btnD : btnP;
+            correctBtn.classList.add('correct');
+        }
+
+        setTimeout(() => {
+            currentIdx++;
+            if (currentIdx < dialogueData.length) {
+                loadSentence();
+            } else {
+                finishGame();
+            }
+        }, 1800);
+    }
+
+    function showSolution() {
+        const correctRole = dialogueData[currentIdx].role;
+        const btnD = document.getElementById('btn-driver');
+        const btnP = document.getElementById('btn-passenger');
+        const correctBtn = (correctRole === 'driver') ? btnD : btnP;
+
+        [btnD, btnP].forEach(b => b.disabled = true);
+        correctBtn.classList.add('correct');
+        document.getElementById('solBtn').disabled = true;
+
+        setTimeout(() => {
+            currentIdx++;
+            if (currentIdx < dialogueData.length) {
+                loadSentence();
+            } else {
+                finishGame();
+            }
+        }, 2200);
+    }
+
+    function finishGame() {
+        document.getElementById('sentenceText').textContent = "Übung beendet!";
+        document.getElementById('playBtn').style.display = 'none';
+        document.getElementById('progressText').textContent = `Ergebnis: ${score} von ${dialogueData.length} richtig.`;
+        document.querySelector('.role-buttons').style.display = 'none';
+        document.getElementById('solBtn').style.display = 'none';
+    }
+
+    loadSentence();
+</script>
+
+</body>
+</html>
