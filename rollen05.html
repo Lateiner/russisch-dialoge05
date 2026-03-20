@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Rollenspiel: Taxi (Männliche Stimme)</title>
+    <style>
+        :root {
+            --taxi-yellow: #f1c40f;
+            --operator-color: #2c3e50; /* Dunkelblau für den männlichen Operator */
+            --passenger-color: #27ae60;
+            --bg-color: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+        }
+
+        .header {
+            background: var(--taxi-yellow);
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            border-bottom: 4px solid #d4ac0d;
+        }
+
+        .chat-area {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #ffffff;
+        }
+
+        .bubble {
+            max-width: 85%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            line-height: 1.4;
+            position: relative;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .bubble.operator {
+            align-self: flex-start;
+            background: var(--operator-color);
+            color: white;
+            border-bottom-left-radius: 2px;
+        }
+
+        .bubble.passenger {
+            align-self: flex-end;
+            background: var(--passenger-color);
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .options-area {
+            background: #f1f2f6;
+            padding: 15px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .option-btn {
+            background: white;
+            border: 2px solid #ddd;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 0.95rem;
+            transition: 0.2s;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--taxi-yellow);
+            background: #fffdf5;
+        }
+
+        .option-btn.correct { background: #d4edda; border-color: #28a745; color: #155724; }
+        .option-btn.incorrect { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+
+        .audio-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            margin-right: 5px;
+        }
+
+        .status {
+            font-size: 0.8rem;
+            text-align: center;
+            color: #888;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">🚕 Taxi-Zentrale (Operator: Pavel)</div>
+    
+    <div class="chat-area" id="chatArea">
+        <div class="status" id="statusLine">Klicke Start, um das Gespräch zu beginnen.</div>
+    </div>
+
+    <div class="options-area" id="optionsArea">
+        <button class="option-btn" style="text-align:center; background:var(--taxi-yellow)" onclick="startConversation()">Simulation starten</button>
+    </div>
+</div>
+
+<script>
+    const dialogue = [
+        {
+            speaker: "operator",
+            text: "Здравствуйте! Откуда вас забрать?",
+            options: [
+                { text: "Я на улице Твернадского, 20.", correct: true },
+                { text: "Я не знаю, где я.", correct: false },
+                { text: "Сколько стоит билет?", correct: false }
+            ]
+        },
+        {
+            speaker: "operator",
+            text: "Хорошо. Куда поедете?",
+            options: [
+                { text: "На метро, пожалуйста.", correct: false },
+                { text: "На улицу Толстого, дом 24.", correct: true },
+                { text: "Я иду пешком.", correct: false }
+            ]
+        },
+        {
+            speaker: "operator",
+            text: "Машина будет через 5 минут. Синяя Киа Рио, номер 745. Ждите.",
+            options: [
+                { text: "Нет, спасибо.", correct: false },
+                { text: "Хорошо, спасибо. Жду!", correct: true },
+                { text: "Где мой багаж?", correct: false }
+            ]
+        }
+    ];
+
+    let currentStep = 0;
+    let maleVoice = null;
+
+    // Funktion zum Suchen einer männlichen russischen Stimme
+    function loadVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        // Suche nach Russisch + männlichen Indikatoren
+        maleVoice = voices.find(v => v.lang.startsWith('ru') && 
+            (v.name.includes('Pavel') || v.name.includes('Maxim') || v.name.includes('Male') || v.name.includes('Microsoft Stefan'))) 
+            || voices.find(v => v.lang.startsWith('ru')); // Fallback auf erste russische Stimme
+    }
+
+    // Voices werden oft verzögert geladen
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    function startConversation() {
+        document.getElementById('optionsArea').innerHTML = '';
+        document.getElementById('statusLine').textContent = '';
+        processStep();
+    }
+
+    function processStep() {
+        if (currentStep >= dialogue.length) {
+            finish();
+            return;
+        }
+
+        const step = dialogue[currentStep];
+        document.getElementById('statusLine').textContent = 'Operator spricht...';
+
+        setTimeout(() => {
+            addBubble(step.text, 'operator');
+            speakText(step.text, true); // True = männliche Stimme
+            document.getElementById('statusLine').textContent = 'Wähle deine Antwort:';
+            showOptions(step.options);
+        }, 800);
+    }
+
+    function addBubble(text, side) {
+        const chatArea = document.getElementById('chatArea');
+        const bubble = document.createElement('div');
+        bubble.className = `bubble ${side}`;
+        bubble.innerHTML = `<button class="audio-btn" onclick="speakText('${text}', ${side==='operator'})">🔊</button> ${text}`;
+        chatArea.appendChild(bubble);
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    function showOptions(options) {
+        const area = document.getElementById('optionsArea');
+        area.innerHTML = '';
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = opt.text;
+            btn.onclick = () => handleChoice(opt, btn);
+            area.appendChild(btn);
+        });
+    }
+
+    function handleChoice(option, btn) {
+        const allBtns = document.querySelectorAll('.option-btn');
+        allBtns.forEach(b => b.disabled = true);
+
+        if (option.correct) {
+            btn.classList.add('correct');
+            setTimeout(() => {
+                addBubble(option.text, 'passenger');
+                speakText(option.text, false); // Passagier-Stimme (Standard)
+                currentStep++;
+                setTimeout(processStep, 1200);
+            }, 500);
+        } else {
+            btn.classList.add('incorrect');
+            setTimeout(() => {
+                btn.classList.remove('incorrect');
+                allBtns.forEach(b => b.disabled = false);
+            }, 800);
+        }
+    }
+
+    function speakText(text, isOperator) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel(); // Stoppe aktuelle Sprache
+            const utterance = new SpeechSynthesisUtterance(text);
+            
+            if (isOperator && maleVoice) {
+                utterance.voice = maleVoice;
+                utterance.pitch = 0.9; // Etwas tiefer für männlichen Klang
+                utterance.rate = 0.85;
+            } else {
+                utterance.lang = 'ru-RU';
+                utterance.pitch = 1.1;
+                utterance.rate = 0.9;
+            }
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    function finish() {
+        document.getElementById('statusLine').textContent = 'Gespräch beendet.';
+        document.getElementById('optionsArea').innerHTML = `
+            <div style="text-align:center; width:100%">
+                <p><b>Sehr gut! Du hast das Taxi erfolgreich bestellt.</b></p>
+                <button class="option-btn" onclick="location.reload()" style="background:var(--taxi-yellow)">Nochmal üben</button>
+            </div>`;
+    }
+</script>
+
+</body>
+</html>
