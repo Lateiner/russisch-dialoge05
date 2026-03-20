@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch: Sätze vervollständigen</title>
+    <style>
+        :root {
+            --taxi-yellow: #f1c40f;
+            --taxi-dark: #2c3e50;
+            --correct: #27ae60;
+            --wrong: #e74c3c;
+            --bg: #fdfdfd;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 550px;
+            width: 100%;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+            padding: 25px;
+            align-self: center;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            margin-bottom: 25px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--taxi-yellow);
+            width: 0%;
+            transition: width 0.4s ease;
+            border-radius: 4px;
+        }
+
+        .sentence-start {
+            background: #f9f9f9;
+            border-left: 5px solid var(--taxi-yellow);
+            padding: 20px;
+            font-size: 1.2rem;
+            color: var(--taxi-dark);
+            margin-bottom: 25px;
+            line-height: 1.5;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .instruction {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .options-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-card {
+            border: 2px solid #edf2f7;
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-align: left;
+            font-size: 1rem;
+            background: white;
+            width: 100%;
+        }
+
+        .option-card:hover:not(.disabled) {
+            border-color: var(--taxi-yellow);
+            background: #fffef0;
+        }
+
+        .option-card.correct {
+            background: #d4edda;
+            border-color: var(--correct);
+            color: #155724;
+        }
+
+        .option-card.wrong {
+            background: #f8d7da;
+            border-color: var(--wrong);
+            color: #721c24;
+        }
+
+        .audio-btn {
+            background: var(--taxi-dark);
+            color: white;
+            border: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .result-screen {
+            text-align: center;
+            display: none;
+        }
+
+        /* Mobile */
+        @media (max-width: 480px) {
+            .container { padding: 15px; }
+            .sentence-start { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="game-ui">
+        <div class="progress-container"><div class="progress-bar" id="progress"></div></div>
+        <p class="instruction">Wähle die richtige Fortsetzung des Satzes:</p>
+        
+        <div class="sentence-start">
+            <button class="audio-btn" id="playStart">🔊</button>
+            <span id="startText">...</span>
+        </div>
+
+        <div class="options-grid" id="optionsGrid">
+            <!-- Optionen kommen hier rein -->
+        </div>
+    </div>
+
+    <div class="result-screen" id="result-ui">
+        <h2>🎉 Übung beendet!</h2>
+        <p id="finalScore"></p>
+        <button onclick="location.reload()" style="padding:12px 25px; border:none; background:var(--taxi-yellow); border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Neu starten</button>
+    </div>
+</div>
+
+<script>
+    const data = [
+        {
+            start: "Здравствуйте! Я хочу заказать такси...",
+            options: [
+                { text: "...на улицу Твернадского, 20.", correct: true },
+                { text: "...на пять-семь минут.", correct: false },
+                { text: "...в багажник автомобиля.", correct: false }
+            ]
+        },
+        {
+            start: "Откуда вас...",
+            options: [
+                { text: "...высадить здесь?", correct: false },
+                { text: "...забрать?", correct: true },
+                { text: "...позвонить таксисту?", correct: false }
+            ]
+        },
+        {
+            start: "Поездка будет...",
+            options: [
+                { text: "...стоить 540 рублей.", correct: true },
+                { text: "...платить картой.", correct: false },
+                { text: "...через пять минут.", correct: false }
+            ]
+        },
+        {
+            start: "Помогите, пожалуйста, положить чемодан...",
+            options: [
+                { text: "...в приложении.", correct: false },
+                { text: "...в багажник.", correct: true },
+                { text: "...на чай.", correct: false }
+            ]
+        },
+        {
+            start: "Вы будете платить наличными или...",
+            options: [
+                { text: "...сдачей?", correct: false },
+                { text: "...приложением?", correct: false },
+                { text: "...картой?", correct: true }
+            ]
+        },
+        {
+            start: "Вы можете высадить меня...",
+            options: [
+                { text: "...после перекрёстка?", correct: true },
+                { text: "...на синюю Киа Рио?", correct: false },
+                { text: "...через пятьсот рублей?", correct: false }
+            ]
+        }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let maleVoice = null;
+
+    function loadVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        maleVoice = voices.find(v => v.lang.startsWith('ru') && 
+            (v.name.includes('Pavel') || v.name.includes('Maxim') || v.name.includes('Male'))) 
+            || voices.find(v => v.lang.startsWith('ru'));
+    }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    function speak(text) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        if (maleVoice) {
+            msg.voice = maleVoice;
+            msg.pitch = 0.9;
+            msg.rate = 0.85;
+        }
+        window.speechSynthesis.speak(msg);
+    }
+
+    function loadStep() {
+        const step = data[currentIdx];
+        document.getElementById('startText').textContent = step.start;
+        document.getElementById('playStart').onclick = () => speak(step.start);
+        
+        const grid = document.getElementById('optionsGrid');
+        grid.innerHTML = '';
+        
+        step.options.forEach(opt => {
+            const card = document.createElement('div');
+            card.className = 'option-card';
+            card.innerHTML = `
+                <button class="audio-btn" onclick="event.stopPropagation(); speak('${opt.text}')">🔊</button>
+                <span>${opt.text}</span>
+            `;
+            card.onclick = () => handleSelect(opt, card);
+            grid.appendChild(card);
+        });
+
+        document.getElementById('progress').style.width = `${(currentIdx / data.length) * 100}%`;
+    }
+
+    function handleSelect(option, element) {
+        const cards = document.querySelectorAll('.option-card');
+        cards.forEach(c => c.classList.add('disabled'));
+
+        if (option.correct) {
+            element.classList.add('correct');
+            score++;
+        } else {
+            element.classList.add('wrong');
+            // Richtige Antwort zeigen
+            cards.forEach((c, i) => {
+                if (data[currentIdx].options[i].correct) c.classList.add('correct');
+            });
+        }
+
+        setTimeout(() => {
+            currentIdx++;
+            if (currentIdx < data.length) {
+                loadStep();
+            } else {
+                showResults();
+            }
+        }, 1500);
+    }
+
+    function showResults() {
+        document.getElementById('game-ui').style.display = 'none';
+        document.getElementById('result-ui').style.display = 'block';
+        document.getElementById('progress').style.width = `100%`;
+        document.getElementById('finalScore').textContent = `Du hast ${score} von ${data.length} Sätzen korrekt vervollständigt.`;
+    }
+
+    loadStep();
+</script>
+
+</body>
+</html>
