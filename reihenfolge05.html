@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch: Dialog sortieren</title>
+    <style>
+        :root {
+            --taxi-yellow: #f1c40f;
+            --dark-blue: #2c3e50;
+            --success: #27ae60;
+            --bg: #f4f7f6;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 650px;
+            width: 100%;
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        h1 { text-align: center; color: var(--dark-blue); font-size: 1.5rem; margin-bottom: 10px; }
+        p.instructions { text-align: center; color: #666; margin-bottom: 25px; font-size: 0.95rem; }
+
+        .sortable-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sortable-item {
+            background: var(--card-bg);
+            border: 2px solid #e1e8ed;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: grab;
+            transition: all 0.2s ease;
+            user-select: none;
+            font-style: normal; /* Keine Kursivschrift */
+        }
+
+        /* Wenn der Satz an der exakt richtigen Stelle steht */
+        .sortable-item.at-correct-position {
+            border-color: var(--success);
+            background-color: #e8f5e9;
+        }
+
+        .sortable-item.dragging {
+            opacity: 0.4;
+            transform: scale(1.02);
+            background: #e1f5fe;
+        }
+
+        .handle {
+            color: #ccc;
+            font-size: 1.5rem;
+            cursor: grab;
+        }
+
+        .content {
+            flex-grow: 1;
+            font-size: 1rem;
+            line-height: 1.4;
+            color: var(--dark-blue);
+        }
+
+        .controls-arrows {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .move-btn {
+            background: #f0f0f0;
+            border: none;
+            border-radius: 5px;
+            width: 34px;
+            height: 34px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            transition: 0.2s;
+        }
+
+        .move-btn:hover { background: var(--taxi-yellow); }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .btn-action {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .btn-solution { background: #3498db; color: white; }
+        .btn-reset { background: #333; color: white; }
+
+        .win-message {
+            display: none;
+            color: var(--success);
+            font-weight: bold;
+            margin-top: 20px;
+            text-align: center;
+            animation: pop 0.4s ease-out;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @media (max-width: 480px) {
+            .container { padding: 15px; }
+            .content { font-size: 0.9rem; }
+            .sortable-item { padding: 10px; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚕 Сортировка диалога</h1>
+    <p class="instructions">Bringe die Sätze in die richtige Reihenfolge. Ziehe sie oder nutze die Pfeile.</p>
+
+    <ul class="sortable-list" id="sortableList">
+        <!-- Sätze werden per JS eingefügt -->
+    </ul>
+
+    <div id="winMessage" class="win-message">🎉 Super! Der Ablauf ist logisch korrekt!</div>
+
+    <div class="footer">
+        <button class="btn-action btn-solution" onclick="showSolution()">Lösung anzeigen</button>
+        <button class="btn-action btn-reset" onclick="location.reload()">Neustart</button>
+    </div>
+</div>
+
+<script>
+    // Die korrekte Reihenfolge aus Dialog 3
+    const correctOrder = [
+        "Не могли бы вы открыть дверь? У меня не получается!",
+        "Да, я случайно заблокировал дверь. Садитесь!",
+        "Вы не против, если я буду пить кофе в машине?",
+        "Я буду аккуратно!",
+        "Да, я не против, только аккуратно, пожалуйста."
+    ];
+
+    let currentItems = [...correctOrder];
+    let maleVoice = null;
+
+    function loadVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        maleVoice = voices.find(v => v.lang.startsWith('ru') && 
+            (v.name.includes('Pavel') || v.name.includes('Maxim') || v.name.includes('Male'))) 
+            || voices.find(v => v.lang.startsWith('ru'));
+    }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    function speak(text) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        if (maleVoice) {
+            msg.voice = maleVoice;
+            msg.pitch = 0.85;
+            msg.rate = 0.85;
+        }
+        window.speechSynthesis.speak(msg);
+    }
+
+    function shuffle() {
+        do {
+            currentItems.sort(() => Math.random() - 0.5);
+        } while (isCorrect());
+        render();
+    }
+
+    function isCorrect() {
+        return JSON.stringify(currentItems) === JSON.stringify(correctOrder);
+    }
+
+    function render() {
+        const list = document.getElementById('sortableList');
+        list.innerHTML = '';
+
+        currentItems.forEach((text, index) => {
+            const isAtCorrectPos = text === correctOrder[index];
+            
+            const li = document.createElement('li');
+            li.className = `sortable-item ${isAtCorrectPos ? 'at-correct-position' : ''}`;
+            li.draggable = true;
+            li.dataset.index = index;
+
+            li.innerHTML = `
+                <div class="handle">☰</div>
+                <div class="content" onclick="speak('${text.replace(/'/g, "\\'")}')">${text}</div>
+                <div class="controls-arrows">
+                    <button class="move-btn" onclick="move(${index}, -1)">▲</button>
+                    <button class="move-btn" onclick="move(${index}, 1)">▼</button>
+                </div>
+            `;
+
+            // Drag Events
+            li.addEventListener('dragstart', handleDragStart);
+            li.addEventListener('dragover', handleDragOver);
+            li.addEventListener('drop', handleDrop);
+            li.addEventListener('dragend', handleDragEnd);
+
+            list.appendChild(li);
+        });
+        
+        if (isCorrect()) {
+            document.getElementById('winMessage').style.display = 'block';
+        } else {
+            document.getElementById('winMessage').style.display = 'none';
+        }
+    }
+
+    function move(index, direction) {
+        const newIndex = index + direction;
+        if (newIndex >= 0 && newIndex < currentItems.length) {
+            const temp = currentItems[index];
+            currentItems[index] = currentItems[newIndex];
+            currentItems[newIndex] = temp;
+            render();
+        }
+    }
+
+    let dragSrcIndex = null;
+
+    function handleDragStart(e) {
+        dragSrcIndex = this.dataset.index;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        return false;
+    }
+
+    function handleDrop(e) {
+        e.stopPropagation();
+        const targetIndex = this.dataset.index;
+        if (dragSrcIndex !== targetIndex) {
+            const temp = currentItems[dragSrcIndex];
+            currentItems.splice(dragSrcIndex, 1);
+            currentItems.splice(targetIndex, 0, temp);
+            render();
+        }
+        return false;
+    }
+
+    function handleDragEnd() {
+        this.classList.remove('dragging');
+    }
+
+    function showSolution() {
+        currentItems = [...correctOrder];
+        render();
+    }
+
+    shuffle();
+</script>
+
+</body>
+</html>
