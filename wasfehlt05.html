@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Hörverstehen: Was fehlt?</title>
+    <style>
+        :root {
+            --taxi-yellow: #f1c40f;
+            --dark: #2c3e50;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f0f2f5;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            max-width: 550px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            padding: 25px;
+            align-self: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #eee;
+            border-radius: 3px;
+            margin-bottom: 25px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--taxi-yellow);
+            width: 0%;
+            transition: width 0.4s;
+        }
+
+        .audio-section {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #fdfdfd;
+            border: 2px dashed #ddd;
+            border-radius: 15px;
+        }
+
+        .play-btn {
+            background: var(--dark);
+            color: white;
+            border: none;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .play-btn:hover { transform: scale(1.05); background: #34495e; }
+        .play-btn:active { transform: scale(0.95); }
+
+        .gap-sentence {
+            font-size: 1.2rem;
+            color: var(--dark);
+            line-height: 1.5;
+            margin-top: 10px;
+        }
+
+        .gap-placeholder {
+            display: inline-block;
+            min-width: 80px;
+            border-bottom: 3px solid var(--taxi-yellow);
+            color: var(--success);
+            font-weight: bold;
+            padding: 0 5px;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .option-btn {
+            background: white;
+            border: 2px solid #edf2f7;
+            padding: 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+            text-transform: lowercase; /* Alles klein */
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--taxi-yellow);
+            background: #fffdf0;
+        }
+
+        .option-btn.correct {
+            background: #d4edda;
+            border-color: var(--success);
+            color: #155724;
+        }
+
+        .option-btn.wrong {
+            background: #f8d7da;
+            border-color: var(--error);
+            color: #721c24;
+        }
+
+        .feedback-text {
+            text-align: center;
+            margin-top: 20px;
+            font-weight: bold;
+            min-height: 24px;
+        }
+
+        .final-screen {
+            display: none;
+            text-align: center;
+        }
+
+        /* Mobile */
+        @media (max-width: 480px) {
+            .options-grid { grid-template-columns: 1fr; }
+            .play-btn { width: 60px; height: 60px; }
+            .gap-sentence { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div id="game-ui">
+        <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+        
+        <div class="audio-section">
+            <button class="play-btn" id="playBtn">▶</button>
+            <p style="font-size: 0.9rem; color: #777;">Höre den Satz an. Welches Wort fehlt?</p>
+            <div class="gap-sentence" id="sentenceDisplay">
+                <!-- Text mit Lücke -->
+            </div>
+        </div>
+
+        <div class="options-grid" id="optionsGrid">
+            <!-- Buttons -->
+        </div>
+        <div class="feedback-text" id="feedback"></div>
+    </div>
+
+    <div class="final-screen" id="finalScreen">
+        <h2>🎉 Großartig!</h2>
+        <p id="scoreText"></p>
+        <button onclick="location.reload()" style="padding:12px 25px; border:none; background:var(--taxi-yellow); border-radius:8px; cursor:pointer; font-weight:bold; margin-top:15px;">Neu starten</button>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        {
+            full: "я хочу заказать такси на улицу твернадского.",
+            missing: "заказать",
+            display: "я хочу <span class='gap-placeholder'>...</span> такси на улицу твернадского.",
+            choices: ["заказать", "показать", "рассказать", "выходить"]
+        },
+        {
+            full: "сколько мне ждать?",
+            missing: "ждать",
+            display: "сколько мне <span class='gap-placeholder'>...</span>?",
+            choices: ["ждать", "ехать", "знать", "оплатить"]
+        },
+        {
+            full: "поездка будет стоить пятьсот сорок рублей.",
+            missing: "стоить",
+            display: "поездка будет <span class='gap-placeholder'>...</span> 540 рублей.",
+            choices: ["стоить", "стоять", "сдача", "платить"]
+        },
+        {
+            full: "положите чемодан в багажник.",
+            missing: "багажник",
+            display: "положите чемодан в <span class='gap-placeholder'>...</span>.",
+            choices: ["багажник", "машину", "багаж", "телефон"]
+        },
+        {
+            full: "вы будете платить наличными или картой?",
+            missing: "картой",
+            display: "вы будете платить наличными или <span class='gap-placeholder'>...</span>?",
+            choices: ["картой", "карта", "сдачей", "чаевые"]
+        },
+        {
+            full: "вы можете высадить меня здесь?",
+            missing: "высадить",
+            display: "вы можете <span class='gap-placeholder'>...</span> меня здесь?",
+            choices: ["высадить", "выходить", "позвонить", "сказать"]
+        }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let maleVoice = null;
+
+    function loadVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        maleVoice = voices.find(v => v.lang.startsWith('ru') && 
+            (v.name.includes('Pavel') || v.name.includes('Maxim') || v.name.includes('Male'))) 
+            || voices.find(v => v.lang.startsWith('ru'));
+    }
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    function speak(text) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        if (maleVoice) {
+            msg.voice = maleVoice;
+            msg.pitch = 0.9;
+            msg.rate = 0.8; // Etwas langsamer für besseres Verständnis
+        }
+        window.speechSynthesis.speak(msg);
+    }
+
+    function loadQuestion() {
+        const q = questions[currentIdx];
+        document.getElementById('sentenceDisplay').innerHTML = q.display;
+        document.getElementById('playBtn').onclick = () => speak(q.full);
+        document.getElementById('feedback').textContent = "";
+        
+        const grid = document.getElementById('optionsGrid');
+        grid.innerHTML = '';
+        
+        // Zufällige Reihenfolge der Antwortmöglichkeiten
+        const shuffledChoices = [...q.choices].sort(() => Math.random() - 0.5);
+        
+        shuffledChoices.forEach(choice => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = choice;
+            btn.onclick = () => checkAnswer(choice, btn);
+            grid.appendChild(btn);
+        });
+
+        document.getElementById('progress').style.width = `${(currentIdx / questions.length) * 100}%`;
+    }
+
+    function checkAnswer(choice, btn) {
+        const q = questions[currentIdx];
+        const allBtns = document.querySelectorAll('.option-btn');
+        allBtns.forEach(b => b.disabled = true);
+
+        if (choice === q.missing) {
+            btn.classList.add('correct');
+            document.getElementById('sentenceDisplay').innerHTML = q.display.replace("...", choice);
+            document.getElementById('feedback').innerHTML = "<span style='color:var(--success)'>Правильно! ✓</span>";
+            score++;
+        } else {
+            btn.classList.add('wrong');
+            document.getElementById('feedback').innerHTML = `<span style='color:var(--error)'>Неверно. Правильно: ${q.missing}</span>`;
+            // Richtige Antwort markieren
+            allBtns.forEach(b => {
+                if (b.textContent === q.missing) b.classList.add('correct');
+            });
+        }
+
+        setTimeout(() => {
+            currentIdx++;
+            if (currentIdx < questions.length) {
+                loadQuestion();
+            } else {
+                showFinal();
+            }
+        }, 1800);
+    }
+
+    function showFinal() {
+        document.getElementById('game-ui').style.display = 'none';
+        document.getElementById('finalScreen').style.display = 'block';
+        document.getElementById('scoreText').textContent = `Du hast ${score} von ${questions.length} Wörtern richtig gehört!`;
+    }
+
+    loadQuestion();
+</script>
+
+</body>
+</html>
