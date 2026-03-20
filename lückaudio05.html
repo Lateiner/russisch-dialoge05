@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Hörverstehen: Taxi</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f8f9fa;
+            --text: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            max-width: 800px;
+            width: 100%;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        h1 { text-align: center; color: var(--primary); margin-bottom: 5px; }
+        .sub-title { text-align: center; color: #666; margin-bottom: 30px; }
+
+        .exercise-section {
+            background: #fff;
+            border: 1px solid #e1e8ed;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: 0.3s;
+        }
+
+        .audio-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .play-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: transform 0.2s;
+        }
+
+        .play-btn:hover { transform: scale(1.1); }
+
+        .dialogue-text {
+            font-size: 1.15rem;
+            line-height: 2;
+        }
+
+        .line { margin-bottom: 10px; }
+
+        /* Dropdown Styling */
+        select {
+            padding: 5px 10px;
+            font-size: 1rem;
+            border: 2px solid #bdc3c7;
+            border-radius: 5px;
+            background: #fff;
+            cursor: pointer;
+            outline: none;
+            font-family: inherit;
+            color: var(--text);
+            transition: all 0.3s;
+        }
+
+        select.correct {
+            border-color: var(--success);
+            background-color: #e8f5e9;
+            color: #1b5e20;
+        }
+
+        select.incorrect {
+            border-color: var(--error);
+            background-color: #ffebee;
+            color: #b71c1c;
+        }
+
+        .score-board {
+            position: sticky;
+            bottom: 20px;
+            background: var(--secondary);
+            text-align: center;
+            padding: 15px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            border-top: 2px solid #eee;
+        }
+
+        .btn-reset {
+            display: block;
+            margin: 20px auto 0;
+            padding: 10px 25px;
+            background: #95a5a6;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .container { padding: 15px; }
+            .dialogue-text { font-size: 1rem; }
+            select { width: 100%; margin: 5px 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎧 Hörverstehen: Taxi</h1>
+    <p class="sub-title">Höre dir die Sätze an und wähle das fehlende Wort aus.</p>
+
+    <!-- Teil 1 -->
+    <div class="exercise-section">
+        <div class="audio-control">
+            <button class="play-btn" onclick="playAudio('Здравствуйте! Я хочу заказать такси на улицу Твернадского. Куда поедете? Поездка будет стоить пятьсот сорок рублей. Сколько ждать?', this)">▶</button>
+            <span><b>Dialog 1:</b> Bestellung am Telefon</span>
+        </div>
+        <div class="dialogue-text">
+            <div class="line">— Здравствуйте! Я хочу 
+                <select onchange="check(this, 'заказать')">
+                    <option value="">...</option>
+                    <option value="вызвать">вызвать</option>
+                    <option value="заказать">заказать</option>
+                    <option value="купить">купить</option>
+                </select> такси.
+            </div>
+            <div class="line">— Куda 
+                <select onchange="check(this, 'поедете')">
+                    <option value="">...</option>
+                    <option value="идете">идёте</option>
+                    <option value="поедете">поедете</option>
+                    <option value="едете">едете</option>
+                </select>?
+            </div>
+            <div class="line">— Поездка будет 
+                <select onchange="check(this, 'стоить')">
+                    <option value="">...</option>
+                    <option value="стоять">стоять</option>
+                    <option value="платить">платить</option>
+                    <option value="стоить">стоить</option>
+                </select> 540 рублей.
+            </div>
+        </div>
+    </div>
+
+    <!-- Teil 2 -->
+    <div class="exercise-section">
+        <div class="audio-control">
+            <button class="play-btn" onclick="playAudio('Положите чемодан в багажник. Вы будете платить наличными или картой?', this)">▶</button>
+            <span><b>Dialog 2:</b> Im Taxi</span>
+        </div>
+        <div class="dialogue-text">
+            <div class="line">— Положите чемодан в 
+                <select onchange="check(this, 'багажник')">
+                    <option value="">...</option>
+                    <option value="багаж">багаж</option>
+                    <option value="багажник">багажник</option>
+                    <option value="машину">машину</option>
+                </select>, пожалуйста.
+            </div>
+            <div class="line">— Вы будете платить наличными или 
+                <select onchange="check(this, 'картой')">
+                    <option value="">...</option>
+                    <option value="карта">карта</option>
+                    <option value="картой">картой</option>
+                    <option value="карт">карт</option>
+                </select>?
+            </div>
+        </div>
+    </div>
+
+    <div class="score-board" id="score">Richtig: 0 / 5</div>
+    <button class="btn-reset" onclick="location.reload()">Übung zurücksetzen</button>
+</div>
+
+<script>
+    let correctCount = 0;
+    const total = 5;
+
+    // Funktion für das Feedback
+    function check(select, correctAnswer) {
+        if (select.value === correctAnswer) {
+            if (!select.classList.contains('correct')) {
+                correctCount++;
+                select.classList.add('correct');
+                select.classList.remove('incorrect');
+                select.disabled = true; // Einmal richtig, dann fixiert
+            }
+        } else if (select.value !== "") {
+            select.classList.add('incorrect');
+            select.classList.remove('correct');
+        } else {
+            select.classList.remove('correct', 'incorrect');
+        }
+        
+        document.getElementById('score').textContent = `Richtig: ${correctCount} / ${total}`;
+        
+        if(correctCount === total) {
+            document.getElementById('score').innerHTML = "Richtig: 5 / 5 🎉 Ausgezeichnet!";
+            document.getElementById('score').style.color = "var(--success)";
+        }
+    }
+
+    // Audio-Funktion (Web Speech API als Fallback für echte MP3s)
+    function playAudio(text, btn) {
+        // Falls Sie echte MP3-Dateien haben, ersetzen Sie dies durch:
+        // let audio = new Audio('pfad/zu/ihrer/datei.mp3');
+        // audio.play();
+
+        if ('speechSynthesis' in window) {
+            // Button kurz deaktivieren
+            btn.disabled = true;
+            btn.style.opacity = "0.5";
+
+            const msg = new SpeechSynthesisUtterance();
+            msg.text = text;
+            msg.lang = 'ru-RU';
+            msg.rate = 0.8; // Etwas langsamer für Lernende
+            
+            msg.onend = () => {
+                btn.disabled = false;
+                btn.style.opacity = "1";
+            };
+
+            window.speechSynthesis.speak(msg);
+        } else {
+            alert("Audio wird von diesem Browser leider nicht unterstützt.");
+        }
+    }
+</script>
+
+</body>
+</html>
